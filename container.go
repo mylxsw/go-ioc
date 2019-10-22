@@ -84,6 +84,8 @@ type Container struct {
 
 	objects      map[interface{}]*Entity
 	objectSlices []*Entity
+
+	parent *Container
 }
 
 // New create a new container
@@ -117,6 +119,22 @@ func NewWithContext(ctx context.Context) *Container {
 
 	cc.MustSingleton(func() context.Context {
 		return ctx
+	})
+
+	return cc
+}
+
+// Extend create a new container and it's parent is supplied container
+// If can not found a binding from current container, it will search from parents
+func Extend(c *Container) *Container {
+	cc := &Container{
+		objects:      make(map[interface{}]*Entity),
+		objectSlices: make([]*Entity, 0),
+		parent:       c,
+	}
+
+	cc.MustSingleton(func() *Container {
+		return cc
 	})
 
 	return cc
@@ -366,14 +384,16 @@ func (c *Container) get(key interface{}, provider func() []*Entity) (interface{}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	for _, obj := range provider() {
+	if provider != nil {
+		for _, obj := range provider() {
 
-		if obj.key == key || obj.key == keyReflectType {
-			return obj.Value(provider)
-		}
+			if obj.key == key || obj.key == keyReflectType {
+				return obj.Value(provider)
+			}
 
-		if obj.typ.AssignableTo(keyReflectType) {
-			return obj.Value(provider)
+			// if obj.typ.AssignableTo(keyReflectType) {
+			// 	return obj.Value(provider)
+			// }
 		}
 	}
 
@@ -383,9 +403,13 @@ func (c *Container) get(key interface{}, provider func() []*Entity) (interface{}
 			return obj.Value(provider)
 		}
 
-		if obj.typ.AssignableTo(keyReflectType) {
-			return obj.Value(provider)
-		}
+		// if obj.typ.AssignableTo(keyReflectType) {
+		// 	return obj.Value(provider)
+		// }
+	}
+
+	if c.parent != nil {
+		return c.parent.get(key, nil)
 	}
 
 	return nil, ErrObjectNotFound(fmt.Sprintf("key=%s", key))
