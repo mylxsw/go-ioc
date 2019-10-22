@@ -140,6 +140,11 @@ func Extend(c *Container) *Container {
 	return cc
 }
 
+// ExtendFrom extend from a parent Container
+func (c *Container) ExtendFrom(parent *Container) {
+	c.parent = parent
+}
+
 // Must if err is not nil, panic it
 func (c *Container) Must(err error) {
 	if err != nil {
