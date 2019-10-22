@@ -368,16 +368,12 @@ func (c *Container) CallWithProvider(callback interface{}, provider func() []*En
 
 // Call call a callback function and return it's results
 func (c *Container) Call(callback interface{}) ([]interface{}, error) {
-	return c.CallWithProvider(callback, func() []*Entity {
-		return make([]*Entity, 0)
-	})
+	return c.CallWithProvider(callback, nil)
 }
 
 // Get get instance by key from container
 func (c *Container) Get(key interface{}) (interface{}, error) {
-	return c.get(key, func() []*Entity {
-		return make([]*Entity, 0)
-	})
+	return c.get(key, nil)
 }
 
 func (c *Container) get(key interface{}, provider func() []*Entity) (interface{}, error) {
