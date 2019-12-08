@@ -42,7 +42,7 @@ func TestPrototype(t *testing.T) {
 	c := container.New()
 
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
-	c.MustSingleton(func(c *container.Container) (*UserRepo, error) {
+	c.MustSingleton(func(c container.Container) (*UserRepo, error) {
 		connStr, err := c.Get("conn_str")
 		if err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func TestPrototype(t *testing.T) {
 	}
 
 	{
-		c.MustResolve(func(cc *container.Container) {
+		c.MustResolve(func(cc container.Container) {
 			userService, err := c.Get((*UserService)(nil))
 			if err != nil {
 				t.Error(err)
@@ -105,7 +105,7 @@ func TestPrototype(t *testing.T) {
 func TestInterfaceInjection(t *testing.T) {
 	c := container.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
-	c.MustSingleton(func(c *container.Container) (*UserRepo, error) {
+	c.MustSingleton(func(c container.Container) (*UserRepo, error) {
 		connStr, err := c.Get("conn_str")
 		if err != nil {
 			return nil, err
@@ -167,7 +167,7 @@ type TestObject struct {
 func TestWithProvider(t *testing.T) {
 	c := container.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
-	c.MustSingleton(func(c *container.Container) (*UserRepo, error) {
+	c.MustSingleton(func(c container.Container) (*UserRepo, error) {
 		connStr, err := c.Get("conn_str")
 		if err != nil {
 			return nil, err
@@ -202,7 +202,7 @@ func TestWithProvider(t *testing.T) {
 func TestExtend(t *testing.T) {
 	c := container.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
-	c.MustSingleton(func(c *container.Container) (*UserRepo, error) {
+	c.MustSingleton(func(c container.Container) (*UserRepo, error) {
 		connStr, err := c.Get("conn_str")
 		if err != nil {
 			return nil, err
