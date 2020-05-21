@@ -199,6 +199,27 @@ func TestWithProvider(t *testing.T) {
 	}
 }
 
+func TestBindValue(t *testing.T) {
+	c := container.New()
+	userRepoStruct := UserRepo{connStr: "user struct"}
+	userRepoPointer := &UserRepo{connStr: "user pointer"}
+
+	c.MustSingleton(userRepoStruct)
+	c.MustSingleton(userRepoPointer)
+
+	c.MustResolve(func(r UserRepo) {
+		if r.connStr != "user struct" {
+			t.Error("test failed")
+		}
+	})
+
+	c.MustResolve(func(r *UserRepo) {
+		if r.connStr != "user pointer" {
+			t.Error("test failed")
+		}
+	})
+}
+
 func TestExtend(t *testing.T) {
 	c := container.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
@@ -242,6 +263,66 @@ func TestExtend(t *testing.T) {
 	}
 
 	if _, err := c.Get("name"); err == nil {
+		t.Error("test failed")
+	}
+}
+
+type InterfaceDemo interface {
+	Hello() string
+}
+
+type demo1 struct{}
+
+func (d demo1) Hello() string { return "demo1" }
+
+type demo2 struct{}
+
+func (d demo2) Hello() string { return "demo2" }
+
+func TestContainerImpl_Override(t *testing.T) {
+	c := container.New()
+
+	c.MustSingleton(func() InterfaceDemo {
+		return demo1{}
+	})
+
+	c.MustSingletonOverride(func() InterfaceDemo {
+		return demo2{}
+	})
+
+	c.MustResolve(func(demo InterfaceDemo) {
+		if "demo2" != demo.Hello() {
+			t.Error("test failed")
+		}
+	})
+
+}
+
+type UserManager struct {
+	UserRepo *UserRepo `autowire:"@" json:"-"`
+	field1   string    `autowire:"version"`
+}
+
+func TestContainerImpl_AutoWire(t *testing.T) {
+	c := container.New()
+
+	userRepoStruct := UserRepo{connStr: "user struct"}
+	userRepoPointer := &UserRepo{connStr: "user pointer"}
+
+	c.MustSingleton(userRepoStruct)
+	c.MustSingleton(userRepoPointer)
+	c.MustBindValue("version", "1.0.1")
+
+	manager := UserManager{}
+	if err := c.AutoWire(&manager); err != nil {
+		t.Error("test failed")
+	}
+
+	if manager.UserRepo.connStr != "user pointer" {
+		t.Error("test failed")
+	}
+
+	if manager.field1 != "1.0.1" {
 		t.Error("test failed")
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"unsafe"
 )
 
 // ResolveError is a error when container can not resolve a object
@@ -88,6 +89,38 @@ type containerImpl struct {
 	parent Container
 }
 
+func (c *containerImpl) PrototypeOverride(initialize interface{}) error {
+	return c.Bind(initialize, true, true)
+}
+
+func (c *containerImpl) MustPrototypeOverride(initialize interface{}) {
+	c.Must(c.PrototypeOverride(initialize))
+}
+
+func (c *containerImpl) PrototypeWithKeyOverride(key interface{}, initialize interface{}) error {
+	return c.BindWithKey(key, initialize, true, true)
+}
+
+func (c *containerImpl) MustPrototypeWithKeyOverride(key interface{}, initialize interface{}) {
+	c.Must(c.PrototypeWithKeyOverride(key, initialize))
+}
+
+func (c *containerImpl) SingletonOverride(initialize interface{}) error {
+	return c.Bind(initialize, false, true)
+}
+
+func (c *containerImpl) MustSingletonOverride(initialize interface{}) {
+	c.Must(c.SingletonOverride(initialize))
+}
+
+func (c *containerImpl) SingletonWithKeyOverride(key interface{}, initialize interface{}) error {
+	return c.BindWithKey(key, initialize, false, true)
+}
+
+func (c *containerImpl) MustSingletonWithKeyOverride(key interface{}, initialize interface{}) {
+	c.Must(c.SingletonWithKeyOverride(key, initialize))
+}
+
 // New create a new container
 func New() Container {
 	cc := &containerImpl{
@@ -155,7 +188,7 @@ func (c *containerImpl) Must(err error) {
 // Prototype bind a prototype
 // initialize func(...) (value, error)
 func (c *containerImpl) Prototype(initialize interface{}) error {
-	return c.Bind(initialize, true)
+	return c.Bind(initialize, true, false)
 }
 
 // MustPrototype bind a prototype, if failed then panic
@@ -166,7 +199,7 @@ func (c *containerImpl) MustPrototype(initialize interface{}) {
 // PrototypeWithKey bind a prototype with key
 // initialize func(...) (value, error)
 func (c *containerImpl) PrototypeWithKey(key interface{}, initialize interface{}) error {
-	return c.BindWithKey(key, initialize, true)
+	return c.BindWithKey(key, initialize, true, false)
 }
 
 // MustPrototypeWithKey bind a prototype with key, it failed, then panic
@@ -175,9 +208,9 @@ func (c *containerImpl) MustPrototypeWithKey(key interface{}, initialize interfa
 }
 
 // Singleton bind a singleton
-// initialize func(...) (value, error)
+// initialize func(...) (value, error) or just an struct object
 func (c *containerImpl) Singleton(initialize interface{}) error {
-	return c.Bind(initialize, false)
+	return c.Bind(initialize, false, false)
 }
 
 // MustSingleton bind a singleton, if bind failed, then panic
@@ -188,7 +221,7 @@ func (c *containerImpl) MustSingleton(initialize interface{}) {
 // SingletonWithKey bind a singleton with key
 // initialize func(...) (value, error)
 func (c *containerImpl) SingletonWithKey(key interface{}, initialize interface{}) error {
-	return c.BindWithKey(key, initialize, false)
+	return c.BindWithKey(key, initialize, false, false)
 }
 
 // MustSingletonWithKey bind a singleton with key, if failed, then panic
@@ -198,16 +231,25 @@ func (c *containerImpl) MustSingletonWithKey(key interface{}, initialize interfa
 
 // BindValue bind a value to container
 func (c *containerImpl) BindValue(key interface{}, value interface{}) error {
+	return c.bindValueOverride(key, value, false)
+}
+
+// HasBindValue return whether the kay has bound to a value
+func (c *containerImpl) HasBindValue(key interface{}) bool {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	_, ok := c.objects[key]
+	return ok
+}
+
+func (c *containerImpl) bindValueOverride(key interface{}, value interface{}, override bool) error {
 	if value == nil {
 		return ErrInvalidArgs("value is nil")
 	}
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	if _, ok := c.objects[key]; ok {
-		return ErrRepeatedBind("key repeated")
-	}
 
 	entity := Entity{
 		initializeFunc: nil,
@@ -219,10 +261,32 @@ func (c *containerImpl) BindValue(key interface{}, value interface{}) error {
 		prototype:      false,
 	}
 
+	if original, ok := c.objects[key]; ok {
+		if !override {
+			return ErrRepeatedBind("key repeated")
+		}
+
+		entity.index = original.index
+		c.objects[key] = &entity
+		c.objectSlices[original.index] = &entity
+
+		return nil
+	}
+
 	c.objects[key] = &entity
 	c.objectSlices = append(c.objectSlices, &entity)
 
 	return nil
+}
+
+// BindValueOverride bind a value to container, if key already exist, then replace it
+func (c *containerImpl) BindValueOverride(key interface{}, value interface{}) error {
+	return c.bindValueOverride(key, value, true)
+}
+
+// MustBindValueOverride bind a value to container, if key already exist, then replace it, if failed, panic it
+func (c *containerImpl) MustBindValueOverride(key interface{}, value interface{}) {
+	c.Must(c.BindValueOverride(key, value))
 }
 
 // MustBindValue bind a value to container, if failed, panic it
@@ -234,7 +298,7 @@ func (c *containerImpl) MustBindValue(key interface{}, value interface{}) {
 func (c *containerImpl) ServiceProvider(initializes ...interface{}) (func() []*Entity, error) {
 	entities := make([]*Entity, len(initializes))
 	for i, init := range initializes {
-		entity, err := c.NewEntity(init, false)
+		entity, err := c.newEntityWrapper(init, false)
 		if err != nil {
 			return nil, err
 		}
@@ -247,8 +311,8 @@ func (c *containerImpl) ServiceProvider(initializes ...interface{}) (func() []*E
 	}, nil
 }
 
-// NewEntity create a new entity
-func (c *containerImpl) NewEntity(initialize interface{}, prototype bool) (*Entity, error) {
+// newEntityWrapper create a new entity
+func (c *containerImpl) newEntityWrapper(initialize interface{}, prototype bool) (*Entity, error) {
 	if !reflect.ValueOf(initialize).IsValid() {
 		return nil, ErrInvalidArgs("initialize is nil")
 	}
@@ -275,30 +339,87 @@ func (c *containerImpl) newEntity(key interface{}, typ reflect.Type, initialize 
 	return &entity
 }
 
+// HasBind return whether a key's type has bound to an object
+func (c *containerImpl) HasBind(key interface{}) bool {
+	keyTyp := reflect.ValueOf(key).Type()
+
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	_, ok := c.objects[keyTyp]
+	return ok
+}
+
 // Bind bind a initialize for object
 // initialize func(...) (value, error)
-func (c *containerImpl) Bind(initialize interface{}, prototype bool) error {
+func (c *containerImpl) Bind(initialize interface{}, prototype bool, override bool) error {
 	if !reflect.ValueOf(initialize).IsValid() {
 		return ErrInvalidArgs("initialize is nil")
 	}
 
 	initializeType := reflect.ValueOf(initialize).Type()
-	if initializeType.NumOut() <= 0 {
-		return ErrInvalidArgs("expect func return values count greater than 0, but got 0")
+	if initializeType.Kind() == reflect.Func {
+		if initializeType.NumOut() <= 0 {
+			return ErrInvalidArgs("expect func return values count greater than 0, but got 0")
+		}
+
+		typ := initializeType.Out(0)
+		return c.bindWithOverride(typ, typ, initialize, prototype, override)
 	}
 
-	typ := initializeType.Out(0)
-	return c.bindWith(typ, typ, initialize, prototype)
+	initFunc := func() interface{} { return initialize }
+	return c.bindWithOverride(initializeType, initializeType, initFunc, prototype, override)
 }
 
 // MustBind bind a initialize, if failed then panic
-func (c *containerImpl) MustBind(initialize interface{}, prototype bool) {
-	c.Must(c.Bind(initialize, prototype))
+func (c *containerImpl) MustBind(initialize interface{}, prototype bool, override bool) {
+	c.Must(c.Bind(initialize, prototype, override))
+}
+
+func (c *containerImpl) AutoWire(object interface{}) error {
+	if !reflect.ValueOf(object).IsValid() {
+		return ErrInvalidArgs("object is nil")
+	}
+
+	valRef := reflect.ValueOf(object)
+	if valRef.Kind() != reflect.Ptr {
+		return ErrInvalidArgs("object must be a pointer to struct object")
+	}
+
+	structValue := valRef.Elem()
+	structType := structValue.Type()
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		tag := field.Tag.Get("autowire")
+		if tag == "" {
+			continue
+		}
+
+		if tag == "@" {
+			val, err := c.instanceOfType(field.Type, nil)
+			if err != nil {
+				return fmt.Errorf("%v: %v", field.Name, err)
+			}
+
+			fieldVal := structValue.Field(i)
+			reflect.NewAt(fieldVal.Type(), unsafe.Pointer(fieldVal.UnsafeAddr())).Elem().Set(val)
+		} else {
+			val, err := c.get(tag, nil)
+			if err != nil {
+				return fmt.Errorf("%v: %v", field.Name, err)
+			}
+
+			fieldVal := structValue.Field(i)
+			reflect.NewAt(fieldVal.Type(), unsafe.Pointer(fieldVal.UnsafeAddr())).Elem().Set(reflect.ValueOf(val))
+		}
+	}
+
+	return nil
 }
 
 // BindWithKey bind a initialize for object with a key
 // initialize func(...) (value, error)
-func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, prototype bool) error {
+func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, prototype bool, override bool) error {
 	if !reflect.ValueOf(initialize).IsValid() {
 		return ErrInvalidArgs("initialize is nil")
 	}
@@ -308,12 +429,12 @@ func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, pro
 		return ErrInvalidArgs("expect func return values count greater than 0, but got 0")
 	}
 
-	return c.bindWith(key, initializeType.Out(0), initialize, prototype)
+	return c.bindWithOverride(key, initializeType.Out(0), initialize, prototype, override)
 }
 
 // MustBindWithKey bind a initialize for object with a key, if failed then panic
-func (c *containerImpl) MustBindWithKey(key interface{}, initialize interface{}, prototype bool) {
-	c.Must(c.BindWithKey(key, initialize, prototype))
+func (c *containerImpl) MustBindWithKey(key interface{}, initialize interface{}, prototype bool, override bool) {
+	c.Must(c.BindWithKey(key, initialize, prototype, override))
 }
 
 // Resolve inject args for func by callback
@@ -426,12 +547,21 @@ func (c *containerImpl) MustGet(key interface{}) interface{} {
 	return res
 }
 
-func (c *containerImpl) bindWith(key interface{}, typ reflect.Type, initialize interface{}, prototype bool) error {
+func (c *containerImpl) bindWithOverride(key interface{}, typ reflect.Type, initialize interface{}, prototype bool, override bool) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if _, ok := c.objects[key]; ok {
-		return ErrRepeatedBind("key repeated")
+	if original, ok := c.objects[key]; ok {
+		if !override {
+			return ErrRepeatedBind("key repeated")
+		}
+
+		entity := c.newEntity(key, typ, initialize, prototype)
+		entity.index = original.index
+		c.objects[key] = entity
+		c.objectSlices[original.index] = entity
+
+		return nil
 	}
 
 	entity := c.newEntity(key, typ, initialize, prototype)
@@ -441,6 +571,10 @@ func (c *containerImpl) bindWith(key interface{}, typ reflect.Type, initialize i
 	c.objectSlices = append(c.objectSlices, entity)
 
 	return nil
+}
+
+func (c *containerImpl) bindWith(key interface{}, typ reflect.Type, initialize interface{}, prototype bool) error {
+	return c.bindWithOverride(key, typ, initialize, prototype, false)
 }
 
 func (c *containerImpl) funcArgs(t reflect.Type, provider func() []*Entity) ([]reflect.Value, error) {
