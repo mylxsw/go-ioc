@@ -30,7 +30,8 @@ type Entity struct {
 	initializeFunc interface{} // initializeFunc is a func to initialize entity
 	value          interface{}
 	typ            reflect.Type
-	index          int // the index in the container
+	index          int  // the index in the container
+	override       bool // identify whether the entity can be override
 
 	prototype bool
 	c         *containerImpl
@@ -256,6 +257,7 @@ func (c *containerImpl) bindValueOverride(key interface{}, value interface{}, ov
 		key:            key,
 		typ:            reflect.TypeOf(value),
 		value:          value,
+		override:       override,
 		index:          len(c.objectSlices),
 		c:              c,
 		prototype:      false,
@@ -264,6 +266,10 @@ func (c *containerImpl) bindValueOverride(key interface{}, value interface{}, ov
 	if original, ok := c.objects[key]; ok {
 		if !override {
 			return ErrRepeatedBind("key repeated")
+		}
+
+		if !original.override {
+			return ErrRepeatedBind("key repeated, override is not allowed for this key")
 		}
 
 		entity.index = original.index
@@ -323,10 +329,10 @@ func (c *containerImpl) newEntityWrapper(initialize interface{}, prototype bool)
 	}
 
 	typ := initializeType.Out(0)
-	return c.newEntity(typ, typ, initialize, prototype), nil
+	return c.newEntity(typ, typ, initialize, prototype, true), nil
 }
 
-func (c *containerImpl) newEntity(key interface{}, typ reflect.Type, initialize interface{}, prototype bool) *Entity {
+func (c *containerImpl) newEntity(key interface{}, typ reflect.Type, initialize interface{}, prototype bool, override bool) *Entity {
 	entity := Entity{
 		initializeFunc: initialize,
 		key:            key,
@@ -334,6 +340,7 @@ func (c *containerImpl) newEntity(key interface{}, typ reflect.Type, initialize 
 		value:          nil,
 		c:              c,
 		prototype:      prototype,
+		override:       override,
 	}
 
 	return &entity
@@ -556,7 +563,11 @@ func (c *containerImpl) bindWithOverride(key interface{}, typ reflect.Type, init
 			return ErrRepeatedBind("key repeated")
 		}
 
-		entity := c.newEntity(key, typ, initialize, prototype)
+		if !original.override {
+			return ErrRepeatedBind("key repeated, override is not allowed for this key")
+		}
+
+		entity := c.newEntity(key, typ, initialize, prototype, override)
 		entity.index = original.index
 		c.objects[key] = entity
 		c.objectSlices[original.index] = entity
@@ -564,7 +575,7 @@ func (c *containerImpl) bindWithOverride(key interface{}, typ reflect.Type, init
 		return nil
 	}
 
-	entity := c.newEntity(key, typ, initialize, prototype)
+	entity := c.newEntity(key, typ, initialize, prototype, override)
 	entity.index = len(c.objectSlices)
 
 	c.objects[key] = entity
