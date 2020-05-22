@@ -48,13 +48,13 @@ type Container interface {
 	SingletonWithKeyOverride(key interface{}, initialize interface{}) error
 	MustSingletonWithKeyOverride(key interface{}, initialize interface{})
 
-	HasBindValue(key interface{}) bool
-	BindValue(key interface{}, value interface{}) error
-	MustBindValue(key interface{}, value interface{})
-	BindValueOverride(key interface{}, value interface{}) error
-	MustBindValueOverride(key interface{}, value interface{})
+	HasBoundValue(key string) bool
+	BindValue(key string, value interface{}) error
+	MustBindValue(key string, value interface{})
+	BindValueOverride(key string, value interface{}) error
+	MustBindValueOverride(key string, value interface{})
 
-	HasBind(key interface{}) bool
+	HasBound(key interface{}) bool
 	Bind(initialize interface{}, prototype bool, override bool) error
 	MustBind(initialize interface{}, prototype bool, override bool)
 	BindWithKey(key interface{}, initialize interface{}, prototype bool, override bool) error
@@ -78,4 +78,5 @@ type Container interface {
 	ExtendFrom(parent Container)
 	Must(err error)
 	Keys() []interface{}
+	CanOverride(key interface{}) (bool, error)
 }

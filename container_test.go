@@ -38,6 +38,7 @@ type UserRepo struct {
 
 var expectedValue = "get user from connection: root:root@/my_db?charset=utf8"
 
+// TestPrototype 测试原型模式
 func TestPrototype(t *testing.T) {
 	c := container.New()
 
@@ -102,6 +103,7 @@ func TestPrototype(t *testing.T) {
 	}
 }
 
+// TestInterfaceInjection 测试接口注入
 func TestInterfaceInjection(t *testing.T) {
 	c := container.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
@@ -143,6 +145,7 @@ func TestInterfaceInjection(t *testing.T) {
 	}
 }
 
+// TestWithContext 测试默认添加 Context 实例
 func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
@@ -164,6 +167,7 @@ type TestObject struct {
 	Name string
 }
 
+// TestWithProvider 测试使用 Provider 提供额外的实例配置
 func TestWithProvider(t *testing.T) {
 	c := container.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
@@ -199,6 +203,7 @@ func TestWithProvider(t *testing.T) {
 	}
 }
 
+// TestBindValue 测试直接绑定实体对象
 func TestBindValue(t *testing.T) {
 	c := container.New()
 	userRepoStruct := UserRepo{connStr: "user struct"}
@@ -220,6 +225,7 @@ func TestBindValue(t *testing.T) {
 	})
 }
 
+// TestExtend 测试容器扩展
 func TestExtend(t *testing.T) {
 	c := container.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
@@ -267,40 +273,45 @@ func TestExtend(t *testing.T) {
 	}
 }
 
+// --------------- 测试实例覆盖  ------------------
+
 type InterfaceDemo interface {
-	Hello() string
+	String() string
 }
 
 type demo1 struct{}
 
-func (d demo1) Hello() string { return "demo1" }
+func (d demo1) String() string { return "demo1" }
 
 type demo2 struct{}
 
-func (d demo2) Hello() string { return "demo2" }
+func (d demo2) String() string { return "demo2" }
 
 func TestContainerImpl_Override(t *testing.T) {
 	c := container.New()
 
-	c.MustSingleton(func() InterfaceDemo {
+	c.MustSingletonOverride(func() InterfaceDemo {
 		return demo1{}
 	})
 
-	c.MustSingletonOverride(func() InterfaceDemo {
+	c.MustSingleton(func() InterfaceDemo {
 		return demo2{}
 	})
 
 	c.MustResolve(func(demo InterfaceDemo) {
-		if "demo2" != demo.Hello() {
+		if "demo2" != demo.String() {
 			t.Error("test failed")
 		}
 	})
 
 }
 
+// ----------- 测试自动注入 --------------
+
 type UserManager struct {
 	UserRepo *UserRepo `autowire:"@" json:"-"`
 	field1   string    `autowire:"version"`
+	Field2   string    `json:"field2"`
 }
 
 func TestContainerImpl_AutoWire(t *testing.T) {
@@ -323,6 +334,29 @@ func TestContainerImpl_AutoWire(t *testing.T) {
 	}
 
 	if manager.field1 != "1.0.1" {
+		t.Error("test failed")
+	}
+
+	if manager.Field2 != "" {
+		t.Error("test failed")
+	}
+}
+
+// ------------- 测试 Keys -------------
+
+func TestContainerImpl_Keys(t *testing.T) {
+	c := container.New()
+	c.MustSingleton(func() InterfaceDemo { return demo1{} })
+	c.MustSingleton(demo2{})
+	c.MustBindValue("key1", "value1")
+	c.MustBindValue("key2", 1233)
+	c.MustBindValue("container.Container", "与接口同名的value")
+
+	for _, k := range c.Keys() {
+		fmt.Printf("%-50v: type=%v, val=%v\n", k, reflect.ValueOf(k).Type(), c.MustGet(k))
+	}
+
+	if c.MustGet("container.Container") != "与接口同名的value" {
 		t.Error("test failed")
 	}
 }
