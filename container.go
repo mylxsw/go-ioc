@@ -366,24 +366,21 @@ func (c *containerImpl) Get(key interface{}) (interface{}, error) {
 }
 
 func (c *containerImpl) get(key interface{}, provider func() []*Entity) (interface{}, error) {
-	keyReflectType, ok := key.(reflect.Type)
-	if !ok {
-		keyReflectType = reflect.TypeOf(key)
-	}
+	lookupKey := c.buildKeyLookupFunc(key)
 
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	if provider != nil {
 		for _, obj := range provider() {
-			if obj.key == key || obj.key == keyReflectType {
+			if lookupKey(obj.key) {
 				return obj.Value(provider)
 			}
 		}
 	}
 
 	for _, obj := range c.objectSlices {
-		if obj.key == key || obj.key == keyReflectType {
+		if lookupKey(obj.key) {
 			return obj.Value(provider)
 		}
 	}
@@ -392,7 +389,34 @@ func (c *containerImpl) get(key interface{}, provider func() []*Entity) (interfa
 		return c.parent.Get(key)
 	}
 
-	return nil, buildObjectNotFoundError(fmt.Sprintf("key=%s not found", key))
+	return nil, buildObjectNotFoundError(fmt.Sprintf("key=%#v not found", key))
+}
+
+// buildKeyLookupFunc 构建用于查询 key 是否存在的函数
+// key 匹配规则为
+//    1. matchKey == lookupKey ，则匹配
+//    2. matchKey == type(lookupKey) ，则匹配
+//    3. 如果 lookupKey 是指向接口的指针，则解析成接口本身，与 matchKey 比较，相等则匹配
+func (c *containerImpl) buildKeyLookupFunc(lookupKey interface{}) func(matchKey interface{}) bool {
+	keyReflectType, ok := lookupKey.(reflect.Type)
+	if !ok {
+		keyReflectType = reflect.TypeOf(lookupKey)
+	}
+
+	keyLookupMap := make(map[interface{}]bool)
+	keyLookupMap[lookupKey] = true
+	keyLookupMap[keyReflectType] = true
+
+	if keyReflectType.Kind() == reflect.Ptr {
+		typeUnderPointer := keyReflectType.Elem()
+		if typeUnderPointer.Kind() == reflect.Interface {
+			keyLookupMap[typeUnderPointer] = true
+		}
+	}
+	return func(key interface{}) bool {
+		_, ok := keyLookupMap[key]
+		return ok
+	}
 }
 
 // MustGet get instance by key from container
@@ -450,7 +474,7 @@ func (c *containerImpl) CanOverride(key interface{}) (bool, error) {
 
 	obj, ok := c.objects[key]
 	if !ok {
-		return true, buildObjectNotFoundError(fmt.Sprintf("key=%v not found", key))
+		return true, buildObjectNotFoundError(fmt.Sprintf("key=%#v not found", key))
 	}
 
 	return obj.override, nil

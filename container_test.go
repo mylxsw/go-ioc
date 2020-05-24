@@ -63,6 +63,15 @@ func TestPrototype(t *testing.T) {
 		t.Errorf("test failed: %s", err)
 		return
 	}
+	{
+		userService, err := c.Get(new(UserService))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		fmt.Println(userService.(*UserService).GetUser())
+	}
 	// reflect.TypeOf((*UserService)(nil))
 	{
 		userService, err := c.Get(reflect.TypeOf((*UserService)(nil)))
@@ -297,6 +306,11 @@ func TestContainerImpl_Override(t *testing.T) {
 	c.MustSingleton(func() InterfaceDemo {
 		return demo2{}
 	})
+
+	res := c.MustGet(new(InterfaceDemo))
+	if "demo2" != res.(InterfaceDemo).String() {
+		t.Error("test failed")
+	}
 
 	c.MustResolve(func(demo InterfaceDemo) {
 		if "demo2" != demo.String() {
