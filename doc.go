@@ -74,7 +74,7 @@ type Container interface {
 	Get(key interface{}) (interface{}, error)
 	MustGet(key interface{}) interface{}
 
-	ServiceProvider(initializes ...interface{}) (func() []*Entity, error)
+	Provider(initializes ...interface{}) (func() []*Entity, error)
 	ExtendFrom(parent Container)
 	Must(err error)
 	Keys() []interface{}

@@ -218,8 +218,8 @@ func (c *containerImpl) MustSingletonWithKey(key interface{}, initialize interfa
 	c.Must(c.SingletonWithKey(key, initialize))
 }
 
-// ServiceProvider create a provider from initializes
-func (c *containerImpl) ServiceProvider(initializes ...interface{}) (func() []*Entity, error) {
+// Provider create a provider from initializes
+func (c *containerImpl) Provider(initializes ...interface{}) (func() []*Entity, error) {
 	entities := make([]*Entity, len(initializes))
 	for i, init := range initializes {
 		entity, err := c.newEntityWrapper(init, false)

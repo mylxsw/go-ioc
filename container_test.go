@@ -192,7 +192,7 @@ func TestWithProvider(t *testing.T) {
 		return &UserService{repo: userRepo}
 	})
 
-	provider, err := c.ServiceProvider(func() *TestObject {
+	provider, err := c.Provider(func() *TestObject {
 		return &TestObject{Name: "mylxsw"}
 	})
 	if err != nil {
