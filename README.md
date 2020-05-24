@@ -1,4 +1,4 @@
-# Container
+# Container 
 
 [![Build Status](https://www.travis-ci.org/mylxsw/container.svg?branch=master)](https://www.travis-ci.org/mylxsw/container)
 [![Coverage Status](https://coveralls.io/repos/github/mylxsw/container/badge.svg?branch=master)](https://coveralls.io/github/mylxsw/container?branch=master)
@@ -8,7 +8,7 @@
 [![GitHub](https://img.shields.io/github/license/mylxsw/container.svg)](https://github.com/mylxsw/container)
 
 
-**Container** 是一款为 Go 语言开发的运行时依赖注入库。Go 语言的语言特性决定了实现一款类型安全的依赖注入容器并不太容易，因此 **Container** 大量使用了 Go 的反射机制。如果你的使用场景对性能要求并不是那个苛刻，那么建议你尝试一下它。
+**Container** 是一款为 Go 语言开发的运行时依赖注入库。Go 语言的语言特性决定了实现一款类型安全的依赖注入容器并不太容易，因此 **Container** 大量使用了 Go 的反射机制。如果你的使用场景对性能要求并不是那个苛刻，那 **Container** 非常适合你。
 
 > 并不是说对性能要求苛刻的环境中就不能使用了，你可以把 **Container** 作为一个对象依赖管理工具，在你的业务初始化时获取依赖的对象。
 
@@ -28,7 +28,7 @@
 - 原型对象（多例对象） `Prototype`
 - 字符串值对象绑定 `Value`
 
-> 所以的对象绑定方法都会返回一个 `error` 返回值来说明是否绑定成功，应用在使用时一定要主动去检查这个 `error`。
+> 所有的对象绑定方法都会返回一个 `error` 返回值来说明是否绑定成功，应用在使用时一定要主动去检查这个 `error`。
 > 
 > 确定对象一定会绑定成功（一般不违反文档中描述的参数签名方式，都是一定会成功的）或者要求对象必须要绑定成功（通常我们都要求这样，不然怎么进行依赖管理呢），则可以使用 `Must` 系列方法，比如 `Singleton` 方法对应的时 `MustSingleton`，当创建出错时，该方法会直接 `panic`。
 
