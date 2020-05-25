@@ -256,7 +256,7 @@
 
 ## 示例项目
 
-简单的示例可以参考项目的 [example](https://github.com/mylxsw/container/example) 目录。
+简单的示例可以参考项目的 [example](https://github.com/mylxsw/container/tree/master/example) 目录。
 
 以下项目中使用了 `Container` 作为依赖注入管理库，感兴趣的可以参考一下。
 
