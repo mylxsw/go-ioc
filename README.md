@@ -12,9 +12,13 @@
 
 > 并不是说对性能要求苛刻的环境中就不能使用了，你可以把 **Container** 作为一个对象依赖管理工具，在你的业务初始化时获取依赖的对象。
 
+使用方式
+
+    go get github.com/mylxsw/container
+
 要创建一个 **Container** 实例，使用 `containier.New` 方法
 
-	cc := container.New()
+    cc := container.New()
 
 此时就创建了一个空的容器。
 
@@ -56,38 +60,38 @@
 
 - 对象创建函数 `func(deps...) 对象返回值` 
 
-	比如 
+    比如 
 
-		cc.Singleton(func() UserRepo { return &userRepoImpl{} })
-		cc.Singleton(func() (*sql.DB, error) {
-			return sql.Open("mysql", "user:pwd@tcp(ip:3306)/dbname")
-		})
-		cc.Singleton(func(db *sql.DB) UserRepo { 
-			// 这里我们创建的 userRepoImpl 对象，依赖 sql.DB 对象，只需要在函数
-			// 参数中，将依赖列举出来，容器会自动完成这些对象的创建
-			return &userRepoImpl{db: db} 
-		})
+        cc.Singleton(func() UserRepo { return &userRepoImpl{} })
+        cc.Singleton(func() (*sql.DB, error) {
+            return sql.Open("mysql", "user:pwd@tcp(ip:3306)/dbname")
+        })
+        cc.Singleton(func(db *sql.DB) UserRepo { 
+            // 这里我们创建的 userRepoImpl 对象，依赖 sql.DB 对象，只需要在函数
+            // 参数中，将依赖列举出来，容器会自动完成这些对象的创建
+            return &userRepoImpl{db: db} 
+        })
 
 - 带错误返回值的对象创建函数 `func(deps...) (对象返回值, error)`
 
-	对象创建函数最多支持两个返回值，且要求第一个返回值为期望创建的对象，第二个返回值为 error 对象。
+    对象创建函数最多支持两个返回值，且要求第一个返回值为期望创建的对象，第二个返回值为 error 对象。
 
-		cc.Singleton(func() (Config, error) {
-			// 假设我们要创建配置对象，该对象的初始化时从文件读取配置
-			content, err := ioutil.ReadFile("test.conf")
-			if err != nil {
-				return nil, err
-			}
+        cc.Singleton(func() (Config, error) {
+            // 假设我们要创建配置对象，该对象的初始化时从文件读取配置
+            content, err := ioutil.ReadFile("test.conf")
+            if err != nil {
+                return nil, err
+            }
 
-			return config.Load(content), nil
-		})
+            return config.Load(content), nil
+        })
 
 - 直接绑定对象 
 
-	如果对象已经创建好了，想要让 **Container** 来管理，可以直接将对象传递 `Singleton` 方法
+    如果对象已经创建好了，想要让 **Container** 来管理，可以直接将对象传递 `Singleton` 方法
 
-		userRepo := repo.NewUserRepo()
-		cc.Singleton(userRepo)
+        userRepo := repo.NewUserRepo()
+        cc.Singleton(userRepo)
 
 
 > 当对象第一次被使用时，**Container** 会将对象创建函数的执行结果缓存起来，从而实现任何时候后访问都是获取到的同一个对象。
@@ -106,10 +110,9 @@
 
 常用的绑定方法为 `BindValue(key string, value interface{})`。
 
-	cc.BindValue("version", "1.0.1")
-	cc.MustBindValue("startTs", time.Now())
-	cc.BindValue("int_val", 123)
-
+    cc.BindValue("version", "1.0.1")
+    cc.MustBindValue("startTs", time.Now())
+    cc.BindValue("int_val", 123)
 
 ## 依赖注入
 
@@ -121,96 +124,94 @@
 
 比如，我们需要获取某个用户的信息和其角色信息，使用 Resolve 方法
 
-	cc.MustResolve(func(userRepo repo.UserRepo, roleRepo repo.RoleRepo) {
-		// 查询 id=123 的用户，查询失败直接panic
-		user, err := userRepo.GetUser(123)
-		if err != nil {
-			panic(err)
-		}
-		// 查询用户角色，查询失败时，我们忽略了返回的错误
-		role, _ := roleRepo.GetRole(user.RoleID)
+    cc.MustResolve(func(userRepo repo.UserRepo, roleRepo repo.RoleRepo) {
+        // 查询 id=123 的用户，查询失败直接panic
+        user, err := userRepo.GetUser(123)
+        if err != nil {
+            panic(err)
+        }
+        // 查询用户角色，查询失败时，我们忽略了返回的错误
+        role, _ := roleRepo.GetRole(user.RoleID)
 
-		// do something you want with user/role
-	})
+        // do something you want with user/role
+    })
 
 直接使用 `Resolve` 方法可能并不太满足我们的日常业务需求，因为在执行查询的时候，总是会遇到各种 `error`，直接丢弃会产生很多隐藏的 Bug，但是我们也不倾向于使用 `Panic` 这种暴力的方式来解决。
 
 **Container** 提供了 `ResolveWithError(callback interface{}) error` 方法，使用该方法时，我们的 callback 可以接受一个 `error` 返回值，来告诉调用者这里出现问题了。
 
-	err := cc.ResolveWithError(func(userRepo repo.UserRepo, roleRepo repo.RoleRepoo) error {
-		user, err := userRepo.GetUser(123)
-		if err != nil {
-			return err
-		}
+    err := cc.ResolveWithError(func(userRepo repo.UserRepo, roleRepo repo.RoleRepoo) error {
+        user, err := userRepo.GetUser(123)
+        if err != nil {
+            return err
+        }
 
-		role, err := roleRepo.GetRole(user.RoleID)
-		if err != nil {
-			return err
-		}
+        role, err := roleRepo.GetRole(user.RoleID)
+        if err != nil {
+            return err
+        }
 
-		// do something you want with user/role
+        // do something you want with user/role
 
-		return nil
-	})
-	if err != nil {
-		// 自定义错误处理
-	}
-
+        return nil
+    })
+    if err != nil {
+        // 自定义错误处理
+    }
 
 ### Call
-
 
 `Call(callback interface{}) ([]interface{}, error)` 方法不仅完成对象的依赖注入，还会返回 `callback` 的返回值，返回值为数组结构。
 
 比如
 
-	results, err := cc.Call(func(userRepo repo.UserRepo) ([]repo.User, error) {
-		users, err := userRepo.AllUsers()
-		return users, err
-	})
-	if err != nil {
-		// 这里的 err 是依赖注入过程中的错误，比如依赖对象创建失败
-	}
+    results, err := cc.Call(func(userRepo repo.UserRepo) ([]repo.User, error) {
+        users, err := userRepo.AllUsers()
+        return users, err
+    })
+    if err != nil {
+        // 这里的 err 是依赖注入过程中的错误，比如依赖对象创建失败
+    }
 
-	// results 是一个类型为 []interface{} 的数组，数组中按次序包含了 callback 函数的返回值
-	// results[0] - []repo.User
-	// results[1] - error
-	// 由于每个返回值都是 interface{} 类型，因此在使用时需要执行类型断言，将其转换为具体的类型再使用
-	users := results[0].([]repo.User)
-	err := results[0].(error)
+    // results 是一个类型为 []interface{} 的数组，数组中按次序包含了 callback 函数的返回值
+    // results[0] - []repo.User
+    // results[1] - error
+    // 由于每个返回值都是 interface{} 类型，因此在使用时需要执行类型断言，将其转换为具体的类型再使用
+    users := results[0].([]repo.User)
+    err := results[0].(error)
 
 
 ### Provider 
 
 有时我们希望为不同的功能模块绑定不同的对象实现，比如在 Web 服务器中，每个请求的 handler 函数需要访问与本次请求有关的 request/response 对象，请求结束之后，**Container** 中的 request/response 对象也就没有用了，不同的请求获取到的也不是同一个对象。我们可以使用 `CallWithProvider(callback interface{}, provider func() []*Entity) ([]interface{}, error)` 配合 `Provider(initializes ...interface{}) (func() []*Entity, error)` 方法实现该功能。
 
-	ctxFunc := func() Context { return ctx }
-	requestFunc := func() Request { return ctx.request }
-	
-	provider, _ := cc.Provider(ctxFunc, requestFunc)
-	results, err := cc.CallWithProvider(func(userRepo repo.UserRepo, req Request) ([]repo.User, error) {
-		// 这里我们注入的 Request 对象，只对当前 callback 有效
-		userId := req.Input("user_id")
-		users, err := userRepo.GetUser(userId)
-		
-		return users, err
-	}, provider)
+    ctxFunc := func() Context { return ctx }
+    requestFunc := func() Request { return ctx.request }
+    
+    provider, _ := cc.Provider(ctxFunc, requestFunc)
+    results, err := cc.CallWithProvider(func(userRepo repo.UserRepo, req Request) ([]repo.User, error) {
+        // 这里我们注入的 Request 对象，只对当前 callback 有效
+        userId := req.Input("user_id")
+        users, err := userRepo.GetUser(userId)
+        
+        return users, err
+    }, provider)
 
 ### AutoWire 结构体属性注入
 
 使用 `AutoWire` 方法可以为结构体的属性注入其绑定的对象，要使用该特性，我们需要在需要依赖注入的结构体对象上添加 `autowire` 标签。
 
-	type UserManager struct {
-		UserRepo *UserRepo `autowire:"@" json:"-"`
-		field1   string    `autowire:"version"`
-		Field2   string    `json:"field2"`
-	}
+    type UserManager struct {
+        UserRepo *UserRepo `autowire:"@" json:"-"`
+        field1   string    `autowire:"version"`
+        Field2   string    `json:"field2"`
+    }
 
-	manager := UserManager{}
-	// 对 manager 执行 AutoWire 之后，会自动注入 UserRepo 和 field1 的值
-	if err := c.AutoWire(&manager); err != nil {
-		t.Error("test failed")
-	}
+    manager := UserManager{}
+    // 对 manager 执行 AutoWire 之后，会自动注入 UserRepo 和 field1 的值
+    if err := c.AutoWire(&manager); err != nil {
+        t.Error("test failed")
+    }
 
 结构体属性注入支持公开和私有字段的注入。如果对象是通过类型来注入的，使用 `autowire:"@"` 来标记属性；如果使用的是 `BindValue` 绑定的字符串为key的对象，则使用 `autowire:"Key名称"` 来标记属性。
 
@@ -222,8 +223,8 @@
 
 方法签名 
 
-	HasBound(key interface{}) bool
-	HasBoundValue(key string) bool
+    HasBound(key interface{}) bool
+    HasBoundValue(key string) bool
 
 用于判断指定的 Key 是否已经绑定过了。
 
@@ -231,7 +232,7 @@
 
 方法签名 
 
-	Keys() []interface{}
+    Keys() []interface{}
 
 获取所有绑定到 **Container** 中的对象信息。
 
@@ -239,7 +240,7 @@
 
 方法签名
 
-	CanOverride(key interface{}) (bool, error)
+    CanOverride(key interface{}) (bool, error)
 
 判断指定的 Key 是否可以覆盖，重新绑定创建函数。
 
@@ -247,13 +248,15 @@
 
 `Extend` 并不是 **Container** 实例上的一个方法，而是一个独立的函数，用于从已有的 Container 生成一个新的 Container，新的 Container 继承已有 Container 所有的对象绑定。
 
-	Extend(c Container) Container
+    Extend(c Container) Container
 
 容器继承之后，在依赖注入对象查找时，会优先从当前 Container 中查找，当找不到对象时，再从父对象查找。
 
 > 在 Container 实例上个，有一个名为 `ExtendFrom(parent Container)` 的方法，该方法用于指定当前 Container 从 parent 继承。
 
 ## 示例项目
+
+简单的示例可以参考项目的 [example](https://github.com/mylxsw/container/example) 目录。
 
 以下项目中使用了 `Container` 作为依赖注入管理库，感兴趣的可以参考一下。
 

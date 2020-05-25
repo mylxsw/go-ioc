@@ -389,7 +389,7 @@ func (c *containerImpl) get(key interface{}, provider func() []*Entity) (interfa
 		return c.parent.Get(key)
 	}
 
-	return nil, buildObjectNotFoundError(fmt.Sprintf("key=%#v not found", key))
+	return nil, buildObjectNotFoundError(fmt.Sprintf("key=%v not found", key))
 }
 
 // buildKeyLookupFunc 构建用于查询 key 是否存在的函数
