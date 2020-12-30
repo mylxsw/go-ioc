@@ -234,6 +234,32 @@ func TestBindValue(t *testing.T) {
 	})
 }
 
+func TestSearchAdvanced(t *testing.T) {
+	c := container.New()
+	c.MustSingleton(func() *UserRepo {
+		return &UserRepo{connStr: "this is user repo"}
+	})
+	c.MustSingleton(func(userRepo *UserRepo) UserService {
+		return UserService{repo: userRepo}
+	})
+
+	for _, k := range c.Keys() {
+		fmt.Printf("%-50v: type=%v, val=%v\n", k, reflect.ValueOf(k).Type(), c.MustGet(k))
+	}
+
+	c.MustResolve(func(userRepo *UserRepo) {
+		fmt.Println(userRepo.connStr)
+	})
+	err := c.Resolve(func(userService *UserService) { fmt.Println(userService.GetUser()) })
+	if err == nil || err.Error() != "args not instanced: not found in container: key=*container_test.UserService not found, may be you want container_test.UserService" {
+		t.Errorf("test failed")
+	}
+	err = c.Resolve(func(userRepo UserRepo) { fmt.Println(userRepo.connStr) })
+	if err == nil || err.Error() != "args not instanced: not found in container: key=container_test.UserRepo not found" {
+		t.Errorf("test failed")
+	}
+}
+
 // TestExtend 测试容器扩展
 func TestExtend(t *testing.T) {
 	c := container.New()

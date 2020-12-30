@@ -264,6 +264,10 @@ func (c *containerImpl) newEntity(key interface{}, typ reflect.Type, initialize 
 	return &entity
 }
 
+func (c *containerImpl) MustAutoWire(object interface{}) {
+	c.Must(c.AutoWire(object))
+}
+
 func (c *containerImpl) AutoWire(object interface{}) error {
 	if !reflect.ValueOf(object).IsValid() {
 		return buildInvalidArgsError("object is nil")
@@ -365,31 +369,43 @@ func (c *containerImpl) Get(key interface{}) (interface{}, error) {
 	return c.get(key, nil)
 }
 
-func (c *containerImpl) get(key interface{}, provider func() []*Entity) (interface{}, error) {
-	lookupKey := c.buildKeyLookupFunc(key)
-
+func (c *containerImpl) getObj(lookupKey func(matchKey interface{}) bool, provider func() []*Entity) *Entity {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	if provider != nil {
 		for _, obj := range provider() {
 			if lookupKey(obj.key) {
-				return obj.Value(provider)
+				return obj
 			}
 		}
 	}
 
 	for _, obj := range c.objectSlices {
 		if lookupKey(obj.key) {
-			return obj.Value(provider)
+			return obj
 		}
+	}
+
+	return nil
+}
+
+func (c *containerImpl) get(key interface{}, provider func() []*Entity) (interface{}, error) {
+	lookupKey, possibleKey := c.buildKeyLookupFunc(key)
+	obj := c.getObj(lookupKey, provider)
+	if obj != nil {
+		return obj.Value(provider)
 	}
 
 	if c.parent != nil {
 		return c.parent.Get(key)
 	}
 
-	return nil, buildObjectNotFoundError(fmt.Sprintf("key=%v not found", key))
+	errMsg := fmt.Sprintf("key=%v not found", key)
+	if possibleKey != nil {
+		errMsg = fmt.Sprintf("%s, may be you want %v", errMsg, possibleKey)
+	}
+	return nil, buildObjectNotFoundError(errMsg)
 }
 
 // buildKeyLookupFunc 构建用于查询 key 是否存在的函数
@@ -397,26 +413,38 @@ func (c *containerImpl) get(key interface{}, provider func() []*Entity) (interfa
 //    1. matchKey == lookupKey ，则匹配
 //    2. matchKey == type(lookupKey) ，则匹配
 //    3. 如果 lookupKey 是指向接口的指针，则解析成接口本身，与 matchKey 比较，相等则匹配
-func (c *containerImpl) buildKeyLookupFunc(lookupKey interface{}) func(matchKey interface{}) bool {
-	keyReflectType, ok := lookupKey.(reflect.Type)
-	if !ok {
+func (c *containerImpl) buildKeyLookupFunc(lookupKey interface{}) (lookupFunc func(matchKey interface{}) bool, possibleKey interface{}) {
+	keyReflectType, lookupKeyIsReflectType := lookupKey.(reflect.Type)
+	if !lookupKeyIsReflectType {
 		keyReflectType = reflect.TypeOf(lookupKey)
 	}
 
 	keyLookupMap := make(map[interface{}]bool)
 	keyLookupMap[lookupKey] = true
-	keyLookupMap[keyReflectType] = true
+	if lookupKey != keyReflectType {
+		keyLookupMap[keyReflectType] = true
+	}
 
-	if keyReflectType.Kind() == reflect.Ptr {
+	switch keyReflectType.Kind() {
+	case reflect.Ptr:
 		typeUnderPointer := keyReflectType.Elem()
-		if typeUnderPointer.Kind() == reflect.Interface {
+		switch typeUnderPointer.Kind() {
+		case reflect.Interface:
 			keyLookupMap[typeUnderPointer] = true
+		default:
+			possibleKey = typeUnderPointer
+		}
+	case reflect.Struct:
+		if !lookupKeyIsReflectType {
+			reflectValue := reflect.ValueOf(lookupKey)
+			possibleKey = reflectValue.Addr().Type()
 		}
 	}
+
 	return func(key interface{}) bool {
 		_, ok := keyLookupMap[key]
 		return ok
-	}
+	}, possibleKey
 }
 
 // MustGet get instance by key from container

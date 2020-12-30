@@ -70,6 +70,7 @@ type Container interface {
 	//  - autowire:"@" 根据字段的类型来注入
 	//  - autowire:"自定义key" 根据自定义的key来注入（查找名为 key 的绑定）
 	AutoWire(object interface{}) error
+	MustAutoWire(object interface{})
 
 	Get(key interface{}) (interface{}, error)
 	MustGet(key interface{}) interface{}
