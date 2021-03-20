@@ -117,13 +117,10 @@ func New() Container {
 		objectSlices: make([]*Entity, 0),
 	}
 
-	cc.MustSingleton(func() Container {
-		return cc
-	})
-
-	cc.MustSingleton(func() context.Context {
-		return context.Background()
-	})
+	cc.MustSingleton(func() Container { return cc })
+	cc.MustSingleton(func() context.Context { return context.Background() })
+	cc.MustSingleton(func() Binder { return cc })
+	cc.MustSingleton(func() Resolver { return cc })
 
 	return cc
 }
@@ -135,13 +132,10 @@ func NewWithContext(ctx context.Context) Container {
 		objectSlices: make([]*Entity, 0),
 	}
 
-	cc.MustSingleton(func() Container {
-		return cc
-	})
-
-	cc.MustSingleton(func() context.Context {
-		return ctx
-	})
+	cc.MustSingleton(func() Container { return cc })
+	cc.MustSingleton(func() context.Context { return ctx })
+	cc.MustSingleton(func() Binder { return cc })
+	cc.MustSingleton(func() Resolver { return cc })
 
 	return cc
 }
