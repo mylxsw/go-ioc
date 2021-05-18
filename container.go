@@ -58,11 +58,11 @@ func (e *Entity) createValue(provider func() []*Entity) (interface{}, error) {
 
 	if len(returnValues) > 1 && !returnValues[1].IsNil() && returnValues[1].Interface() != nil {
 		if err, ok := returnValues[1].Interface().(error); ok {
-			return nil, err
+			return nil, fmt.Errorf("(%s) %w", e.key, err)
 		}
 
 		// 如果第二个返回值不是 error，则强制转换为 error
-		return nil, fmt.Errorf("%v", returnValues[1].Interface())
+		return nil, fmt.Errorf("(%s) %v", e.key, returnValues[1].Interface())
 	}
 
 	return returnValues[0].Interface(), nil
