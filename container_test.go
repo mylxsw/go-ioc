@@ -192,12 +192,6 @@ func TestWithProvider(t *testing.T) {
 		return &UserService{repo: userRepo}
 	})
 
-	provider, err := c.Provider(func() *TestObject {
-		return &TestObject{Name: "mylxsw"}
-	})
-	if err != nil {
-		t.Error("test failed")
-	}
 	if _, err := c.CallWithProvider(func(userService *UserService, testObject *TestObject) {
 		if userService.GetUser() != expectedValue {
 			t.Error("test failed")
@@ -206,7 +200,9 @@ func TestWithProvider(t *testing.T) {
 		if testObject.Name != "mylxsw" {
 			t.Error("test failed")
 		}
-	}, provider); err != nil {
+	}, c.Provider(func() *TestObject {
+		return &TestObject{Name: "mylxsw"}
+	})); err != nil {
 		t.Errorf("test failed: %s", err)
 		return
 	}

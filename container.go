@@ -24,7 +24,7 @@ type Entity struct {
 }
 
 // Value instance value if not initialized
-func (e *Entity) Value(provider func() []*Entity) (interface{}, error) {
+func (e *Entity) Value(provider EntitiesProvider) (interface{}, error) {
 	if e.prototype {
 		return e.createValue(provider)
 	}
@@ -44,7 +44,7 @@ func (e *Entity) Value(provider func() []*Entity) (interface{}, error) {
 	return e.value, nil
 }
 
-func (e *Entity) createValue(provider func() []*Entity) (interface{}, error) {
+func (e *Entity) createValue(provider EntitiesProvider) (interface{}, error) {
 	initializeValue := reflect.ValueOf(e.initializeFunc)
 	argValues, err := e.c.funcArgs(initializeValue.Type(), provider)
 	if err != nil {
@@ -213,12 +213,12 @@ func (c *containerImpl) MustSingletonWithKey(key interface{}, initialize interfa
 }
 
 // Provider create a provider from initializes
-func (c *containerImpl) Provider(initializes ...interface{}) (func() []*Entity, error) {
+func (c *containerImpl) Provider(initializes ...interface{}) EntitiesProvider {
 	entities := make([]*Entity, len(initializes))
 	for i, init := range initializes {
 		entity, err := c.newEntityWrapper(init, false)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 
 		entities[i] = entity
@@ -226,7 +226,7 @@ func (c *containerImpl) Provider(initializes ...interface{}) (func() []*Entity, 
 
 	return func() []*Entity {
 		return entities
-	}, nil
+	}
 }
 
 // newEntityWrapper create a new entity
@@ -333,7 +333,7 @@ func (c *containerImpl) ResolveWithError(callback interface{}) error {
 }
 
 // CallWithProvider execute the callback with extra service provider
-func (c *containerImpl) CallWithProvider(callback interface{}, provider func() []*Entity) ([]interface{}, error) {
+func (c *containerImpl) CallWithProvider(callback interface{}, provider EntitiesProvider) ([]interface{}, error) {
 	callbackValue := reflect.ValueOf(callback)
 	if !callbackValue.IsValid() {
 		return nil, buildInvalidArgsError("callback is nil")

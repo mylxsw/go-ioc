@@ -61,7 +61,7 @@ type Container interface {
 	Resolve(callback interface{}) error
 	MustResolve(callback interface{})
 	ResolveWithError(callback interface{}) error
-	CallWithProvider(callback interface{}, provider func() []*Entity) ([]interface{}, error)
+	CallWithProvider(callback interface{}, provider EntitiesProvider) ([]interface{}, error)
 	Call(callback interface{}) ([]interface{}, error)
 	// AutoWire 自动对结构体对象进行依赖注入，object 必须是结构体对象的指针
 	// 自动注入字段（公开和私有均支持）需要添加 `autowire` tag，支持以下两种
@@ -73,7 +73,7 @@ type Container interface {
 	Get(key interface{}) (interface{}, error)
 	MustGet(key interface{}) interface{}
 
-	Provider(initializes ...interface{}) (func() []*Entity, error)
+	Provider(initializes ...interface{}) EntitiesProvider
 	ExtendFrom(parent Container)
 
 	Must(err error)
@@ -121,11 +121,14 @@ type Binder interface {
 	HasBound(key interface{}) bool
 }
 
+type EntitiesProvider func() []*Entity
+
 type Resolver interface {
 	Resolve(callback interface{}) error
 	MustResolve(callback interface{})
 	ResolveWithError(callback interface{}) error
-	CallWithProvider(callback interface{}, provider func() []*Entity) ([]interface{}, error)
+	CallWithProvider(callback interface{}, provider EntitiesProvider) ([]interface{}, error)
+	Provider(initializes ...interface{}) EntitiesProvider
 	Call(callback interface{}) ([]interface{}, error)
 	// AutoWire 自动对结构体对象进行依赖注入，object 必须是结构体对象的指针
 	// 自动注入字段（公开和私有均支持）需要添加 `autowire` tag，支持以下两种
