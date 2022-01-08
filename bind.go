@@ -86,7 +86,13 @@ func (c *containerImpl) HasBound(key interface{}) bool {
 // BindWithKey bind a initialize for object with a key
 // initialize func(...) (value, error)
 func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, prototype bool, override bool) error {
-	if !reflect.ValueOf(initialize).IsValid() {
+	if _, ok := initialize.(Conditional); !ok {
+		initialize = WithCondition(initialize, func() bool { return true })
+	}
+
+	initF := initialize.(Conditional).getInitFunc()
+
+	if !reflect.ValueOf(initF).IsValid() {
 		return buildInvalidArgsError("initialize is nil")
 	}
 
@@ -94,7 +100,7 @@ func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, pro
 		return err
 	}
 
-	initializeType := reflect.ValueOf(initialize).Type()
+	initializeType := reflect.ValueOf(initF).Type()
 	if initializeType.Kind() == reflect.Func {
 		if initializeType.NumOut() <= 0 {
 			return buildInvalidArgsError("expect func return values count greater than 0, but got 0")
@@ -103,7 +109,7 @@ func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, pro
 		return c.bindWithOverride(key, initializeType.Out(0), initialize, prototype, override)
 	}
 
-	initFunc := func() interface{} { return initialize }
+	initFunc := WithCondition(func() interface{} { return initF }, initialize.(Conditional).matched)
 	return c.bindWithOverride(key, initializeType, initFunc, prototype, override)
 }
 
@@ -115,11 +121,17 @@ func (c *containerImpl) MustBindWithKey(key interface{}, initialize interface{},
 // Bind bind a initialize for object
 // initialize func(...) (value, error)
 func (c *containerImpl) Bind(initialize interface{}, prototype bool, override bool) error {
-	if !reflect.ValueOf(initialize).IsValid() {
+	if _, ok := initialize.(Conditional); !ok {
+		initialize = conditional{init: initialize, on: func() bool { return true }}
+	}
+
+	initF := initialize.(Conditional).getInitFunc()
+
+	if !reflect.ValueOf(initF).IsValid() {
 		return buildInvalidArgsError("initialize is nil")
 	}
 
-	initializeType := reflect.ValueOf(initialize).Type()
+	initializeType := reflect.ValueOf(initF).Type()
 	if initializeType.Kind() == reflect.Func {
 		if initializeType.NumOut() <= 0 {
 			return buildInvalidArgsError("expect func return values count greater than 0, but got 0")
@@ -138,7 +150,7 @@ func (c *containerImpl) Bind(initialize interface{}, prototype bool, override bo
 		return err
 	}
 
-	initFunc := func() interface{} { return initialize }
+	initFunc := WithCondition(func() interface{} { return initF }, initialize.(Conditional).getOnCondition())
 	return c.bindWithOverride(initializeType, initializeType, initFunc, prototype, override)
 }
 
@@ -147,9 +159,22 @@ func (c *containerImpl) MustBind(initialize interface{}, prototype bool, overrid
 	c.Must(c.Bind(initialize, prototype, override))
 }
 
-
 func (c *containerImpl) bindWithOverride(key interface{}, typ reflect.Type, initialize interface{}, prototype bool, override bool) error {
-	entity := c.newEntity(key, typ, initialize, prototype, override)
+	var entity *Entity
+	if cond, ok := initialize.(Conditional); ok {
+		matched, err := cond.matched(c)
+		if err != nil {
+			return err
+		}
+
+		if !matched {
+			return nil
+		}
+
+		entity = c.newEntity(key, typ, cond.getInitFunc(), prototype, override)
+	} else {
+		entity = c.newEntity(key, typ, initialize, prototype, override)
+	}
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -172,8 +197,4 @@ func (c *containerImpl) bindWithOverride(key interface{}, typ reflect.Type, init
 	c.objectSlices = append(c.objectSlices, entity)
 
 	return nil
-}
-
-func (c *containerImpl) bindWith(key interface{}, typ reflect.Type, initialize interface{}, prototype bool) error {
-	return c.bindWithOverride(key, typ, initialize, prototype, false)
 }

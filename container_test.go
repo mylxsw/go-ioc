@@ -396,3 +396,40 @@ func TestContainerImpl_Keys(t *testing.T) {
 		t.Error("test failed")
 	}
 }
+
+func TestConditional(t *testing.T) {
+	{
+		c := container.New()
+		c.MustSingleton(container.WithCondition(func() InterfaceDemo {
+			return demo1{}
+		}, func() bool { return true }))
+
+		c.MustSingleton(container.WithCondition(func() InterfaceDemo {
+			return demo2{}
+		}, func() bool { return false }))
+
+		c.MustResolve(func(demo InterfaceDemo) {
+			if demo.String() != "demo1" {
+				t.Error("test failed")
+			}
+		})
+	}
+
+	{
+		c := container.New()
+		c.MustPrototype(container.WithCondition(func() InterfaceDemo {
+			return demo2{}
+		}, func() bool { return true }))
+
+		c.MustPrototype(container.WithCondition(func() InterfaceDemo {
+			return demo1{}
+		}, func() bool { return false }))
+
+		c.MustResolve(func(demo InterfaceDemo) {
+			if demo.String() != "demo2" {
+				t.Error("test failed")
+			}
+		})
+	}
+
+}

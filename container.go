@@ -140,7 +140,7 @@ func NewWithContext(ctx context.Context) Container {
 	return cc
 }
 
-// Extend create a new container and it's parent is supplied container
+// Extend create a new container, and it's parent is supplied container
 // If can not found a binding from current container, it will search from parents
 func Extend(c Container) Container {
 	cc := &containerImpl{
@@ -353,12 +353,12 @@ func (c *containerImpl) CallWithProvider(callback interface{}, provider Entities
 	return results, nil
 }
 
-// Call call a callback function and return it's results
+// Call a callback function and return its results
 func (c *containerImpl) Call(callback interface{}) ([]interface{}, error) {
 	return c.CallWithProvider(callback, nil)
 }
 
-// Get get instance by key from container
+// Get instance by key from container
 func (c *containerImpl) Get(key interface{}) (interface{}, error) {
 	return c.get(key, nil)
 }

@@ -244,6 +244,21 @@
 
 判断指定的 Key 是否可以覆盖，重新绑定创建函数。
 
+### WithCondition
+
+`WithCondition` 并不是 **Container** 实例的一个方法，而是一个工具函数，用于创建 `Conditional` 接口。实现 `Conditional` 接口后，在创建实例方法时会根据指定条件是否为 true 来判断当前实例方法是否有效。
+
+```go
+WithCondition(init interface{}, onCondition interface{}) Conditional
+```
+
+参数 `init` 是传递给 `Singleton` 和 `Prototype` 方法的实例创建方法，`onCondition` 参数则是一个条件，在调用 `Singleton` 及 `Prototype` 方法时，会执行 `onCondition` 函数，该函数支持两种形式
+
+- `onCondition(依赖注入参数列表...) bool`
+- `onCondition(依赖注入参数列表...) (bool, error)`
+
+`onCondition` 函数的 bool 返回值用于控制该实例方法是否生效。
+
 ### Extend
 
 `Extend` 并不是 **Container** 实例上的一个方法，而是一个独立的函数，用于从已有的 Container 生成一个新的 Container，新的 Container 继承已有 Container 所有的对象绑定。
