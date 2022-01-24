@@ -334,7 +334,11 @@ func (c *containerImpl) ResolveWithError(callback interface{}) error {
 
 // CallWithProvider execute the callback with extra service provider
 func (c *containerImpl) CallWithProvider(callback interface{}, provider EntitiesProvider) ([]interface{}, error) {
-	callbackValue := reflect.ValueOf(callback)
+	callbackValue, ok := callback.(reflect.Value)
+	if !ok {
+		callbackValue = reflect.ValueOf(callback)
+	}
+
 	if !callbackValue.IsValid() {
 		return nil, buildInvalidArgsError("callback is nil")
 	}

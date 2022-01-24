@@ -433,3 +433,14 @@ func TestConditional(t *testing.T) {
 	}
 
 }
+
+func TestResolveReflectValue(t *testing.T) {
+	cc := container.New()
+	cc.MustSingleton(func() InterfaceDemo { return demo1{} })
+
+	callback := func(demo InterfaceDemo) {
+		fmt.Println(demo.String())
+	}
+
+	cc.MustResolve(reflect.ValueOf(callback))
+}
