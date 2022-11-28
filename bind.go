@@ -3,20 +3,20 @@ package container
 import "reflect"
 
 // BindValue bind a value to container
-func (c *containerImpl) BindValue(key string, value interface{}) error {
-	return c.bindValueOverride(key, value, false)
+func (impl *containerImpl) BindValue(key string, value interface{}) error {
+	return impl.bindValueOverride(key, value, false)
 }
 
 // HasBoundValue return whether the kay has bound to a value
-func (c *containerImpl) HasBoundValue(key string) bool {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+func (impl *containerImpl) HasBoundValue(key string) bool {
+	impl.lock.RLock()
+	defer impl.lock.RUnlock()
 
-	_, ok := c.objects[key]
+	_, ok := impl.objects[key]
 	return ok
 }
 
-func (c *containerImpl) bindValueOverride(key string, value interface{}, override bool) error {
+func (impl *containerImpl) bindValueOverride(key string, value interface{}, override bool) error {
 	if value == nil {
 		return buildInvalidArgsError("value is nil")
 	}
@@ -25,8 +25,8 @@ func (c *containerImpl) bindValueOverride(key string, value interface{}, overrid
 		return buildInvalidArgsError("key can not be empty or reserved words(@)")
 	}
 
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	impl.lock.Lock()
+	defer impl.lock.Unlock()
 
 	entity := Entity{
 		initializeFunc: nil,
@@ -34,58 +34,58 @@ func (c *containerImpl) bindValueOverride(key string, value interface{}, overrid
 		typ:            reflect.TypeOf(value),
 		value:          value,
 		override:       override,
-		index:          len(c.objectSlices),
-		c:              c,
+		index:          len(impl.objectSlices),
+		c:              impl,
 		prototype:      false,
 	}
 
-	if original, ok := c.objects[key]; ok {
+	if original, ok := impl.objects[key]; ok {
 		if !original.override {
 			return buildRepeatedBindError("key repeated, override is not allowed for this key")
 		}
 
 		entity.index = original.index
-		c.objects[key] = &entity
-		c.objectSlices[original.index] = &entity
+		impl.objects[key] = &entity
+		impl.objectSlices[original.index] = &entity
 
 		return nil
 	}
 
-	c.objects[key] = &entity
-	c.objectSlices = append(c.objectSlices, &entity)
+	impl.objects[key] = &entity
+	impl.objectSlices = append(impl.objectSlices, &entity)
 
 	return nil
 }
 
 // BindValueOverride bind a value to container, if key already exist, then replace it
-func (c *containerImpl) BindValueOverride(key string, value interface{}) error {
-	return c.bindValueOverride(key, value, true)
+func (impl *containerImpl) BindValueOverride(key string, value interface{}) error {
+	return impl.bindValueOverride(key, value, true)
 }
 
 // MustBindValueOverride bind a value to container, if key already exist, then replace it, if failed, panic it
-func (c *containerImpl) MustBindValueOverride(key string, value interface{}) {
-	c.Must(c.BindValueOverride(key, value))
+func (impl *containerImpl) MustBindValueOverride(key string, value interface{}) {
+	impl.Must(impl.BindValueOverride(key, value))
 }
 
 // MustBindValue bind a value to container, if failed, panic it
-func (c *containerImpl) MustBindValue(key string, value interface{}) {
-	c.Must(c.BindValue(key, value))
+func (impl *containerImpl) MustBindValue(key string, value interface{}) {
+	impl.Must(impl.BindValue(key, value))
 }
 
 // HasBound return whether a key's type has bound to an object
-func (c *containerImpl) HasBound(key interface{}) bool {
+func (impl *containerImpl) HasBound(key interface{}) bool {
 	keyTyp := reflect.ValueOf(key).Type()
 
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	impl.lock.RLock()
+	defer impl.lock.RUnlock()
 
-	_, ok := c.objects[keyTyp]
+	_, ok := impl.objects[keyTyp]
 	return ok
 }
 
 // BindWithKey bind a initialize for object with a key
 // initialize func(...) (value, error)
-func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, prototype bool, override bool) error {
+func (impl *containerImpl) BindWithKey(key interface{}, initialize interface{}, prototype bool, override bool) error {
 	if _, ok := initialize.(Conditional); !ok {
 		initialize = WithCondition(initialize, func() bool { return true })
 	}
@@ -96,7 +96,7 @@ func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, pro
 		return buildInvalidArgsError("initialize is nil")
 	}
 
-	if err := c.isValidKeyKind(reflect.TypeOf(key).Kind()); err != nil {
+	if err := impl.isValidKeyKind(reflect.TypeOf(key).Kind()); err != nil {
 		return err
 	}
 
@@ -106,21 +106,21 @@ func (c *containerImpl) BindWithKey(key interface{}, initialize interface{}, pro
 			return buildInvalidArgsError("expect func return values count greater than 0, but got 0")
 		}
 
-		return c.bindWithOverride(key, initializeType.Out(0), initialize, prototype, override)
+		return impl.bindWithOverride(key, initializeType.Out(0), initialize, prototype, override)
 	}
 
 	initFunc := WithCondition(func() interface{} { return initF }, initialize.(Conditional).matched)
-	return c.bindWithOverride(key, initializeType, initFunc, prototype, override)
+	return impl.bindWithOverride(key, initializeType, initFunc, prototype, override)
 }
 
 // MustBindWithKey bind a initialize for object with a key, if failed then panic
-func (c *containerImpl) MustBindWithKey(key interface{}, initialize interface{}, prototype bool, override bool) {
-	c.Must(c.BindWithKey(key, initialize, prototype, override))
+func (impl *containerImpl) MustBindWithKey(key interface{}, initialize interface{}, prototype bool, override bool) {
+	impl.Must(impl.BindWithKey(key, initialize, prototype, override))
 }
 
 // Bind bind a initialize for object
 // initialize func(...) (value, error)
-func (c *containerImpl) Bind(initialize interface{}, prototype bool, override bool) error {
+func (impl *containerImpl) Bind(initialize interface{}, prototype bool, override bool) error {
 	if _, ok := initialize.(Conditional); !ok {
 		initialize = conditional{init: initialize, on: func() bool { return true }}
 	}
@@ -139,30 +139,30 @@ func (c *containerImpl) Bind(initialize interface{}, prototype bool, override bo
 
 		typ := initializeType.Out(0)
 
-		if err := c.isValidKeyKind(typ.Kind()); err != nil {
+		if err := impl.isValidKeyKind(typ.Kind()); err != nil {
 			return err
 		}
 
-		return c.bindWithOverride(typ, typ, initialize, prototype, override)
+		return impl.bindWithOverride(typ, typ, initialize, prototype, override)
 	}
 
-	if err := c.isValidKeyKind(initializeType.Kind()); err != nil {
+	if err := impl.isValidKeyKind(initializeType.Kind()); err != nil {
 		return err
 	}
 
 	initFunc := WithCondition(func() interface{} { return initF }, initialize.(Conditional).getOnCondition())
-	return c.bindWithOverride(initializeType, initializeType, initFunc, prototype, override)
+	return impl.bindWithOverride(initializeType, initializeType, initFunc, prototype, override)
 }
 
 // MustBind bind a initialize, if failed then panic
-func (c *containerImpl) MustBind(initialize interface{}, prototype bool, override bool) {
-	c.Must(c.Bind(initialize, prototype, override))
+func (impl *containerImpl) MustBind(initialize interface{}, prototype bool, override bool) {
+	impl.Must(impl.Bind(initialize, prototype, override))
 }
 
-func (c *containerImpl) bindWithOverride(key interface{}, typ reflect.Type, initialize interface{}, prototype bool, override bool) error {
+func (impl *containerImpl) bindWithOverride(key interface{}, typ reflect.Type, initialize interface{}, prototype bool, override bool) error {
 	var entity *Entity
 	if cond, ok := initialize.(Conditional); ok {
-		matched, err := cond.matched(c)
+		matched, err := cond.matched(impl)
 		if err != nil {
 			return err
 		}
@@ -171,30 +171,30 @@ func (c *containerImpl) bindWithOverride(key interface{}, typ reflect.Type, init
 			return nil
 		}
 
-		entity = c.newEntity(key, typ, cond.getInitFunc(), prototype, override)
+		entity = impl.newEntity(key, typ, cond.getInitFunc(), prototype, override)
 	} else {
-		entity = c.newEntity(key, typ, initialize, prototype, override)
+		entity = impl.newEntity(key, typ, initialize, prototype, override)
 	}
 
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	impl.lock.Lock()
+	defer impl.lock.Unlock()
 
-	if original, ok := c.objects[key]; ok {
+	if original, ok := impl.objects[key]; ok {
 		if !original.override {
 			return buildRepeatedBindError("key repeated, override is not allowed for this key")
 		}
 
 		entity.index = original.index
-		c.objects[key] = entity
-		c.objectSlices[original.index] = entity
+		impl.objects[key] = entity
+		impl.objectSlices[original.index] = entity
 
 		return nil
 	}
 
-	entity.index = len(c.objectSlices)
+	entity.index = len(impl.objectSlices)
 
-	c.objects[key] = entity
-	c.objectSlices = append(c.objectSlices, entity)
+	impl.objects[key] = entity
+	impl.objectSlices = append(impl.objectSlices, entity)
 
 	return nil
 }

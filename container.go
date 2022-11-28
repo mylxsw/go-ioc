@@ -78,51 +78,51 @@ type containerImpl struct {
 	parent Container
 }
 
-func (c *containerImpl) PrototypeOverride(initialize interface{}) error {
-	return c.Bind(initialize, true, true)
+func (impl *containerImpl) PrototypeOverride(initialize interface{}) error {
+	return impl.Bind(initialize, true, true)
 }
 
-func (c *containerImpl) MustPrototypeOverride(initialize interface{}) {
-	c.Must(c.PrototypeOverride(initialize))
+func (impl *containerImpl) MustPrototypeOverride(initialize interface{}) {
+	impl.Must(impl.PrototypeOverride(initialize))
 }
 
-func (c *containerImpl) PrototypeWithKeyOverride(key interface{}, initialize interface{}) error {
-	return c.BindWithKey(key, initialize, true, true)
+func (impl *containerImpl) PrototypeWithKeyOverride(key interface{}, initialize interface{}) error {
+	return impl.BindWithKey(key, initialize, true, true)
 }
 
-func (c *containerImpl) MustPrototypeWithKeyOverride(key interface{}, initialize interface{}) {
-	c.Must(c.PrototypeWithKeyOverride(key, initialize))
+func (impl *containerImpl) MustPrototypeWithKeyOverride(key interface{}, initialize interface{}) {
+	impl.Must(impl.PrototypeWithKeyOverride(key, initialize))
 }
 
-func (c *containerImpl) SingletonOverride(initialize interface{}) error {
-	return c.Bind(initialize, false, true)
+func (impl *containerImpl) SingletonOverride(initialize interface{}) error {
+	return impl.Bind(initialize, false, true)
 }
 
-func (c *containerImpl) MustSingletonOverride(initialize interface{}) {
-	c.Must(c.SingletonOverride(initialize))
+func (impl *containerImpl) MustSingletonOverride(initialize interface{}) {
+	impl.Must(impl.SingletonOverride(initialize))
 }
 
-func (c *containerImpl) SingletonWithKeyOverride(key interface{}, initialize interface{}) error {
-	return c.BindWithKey(key, initialize, false, true)
+func (impl *containerImpl) SingletonWithKeyOverride(key interface{}, initialize interface{}) error {
+	return impl.BindWithKey(key, initialize, false, true)
 }
 
-func (c *containerImpl) MustSingletonWithKeyOverride(key interface{}, initialize interface{}) {
-	c.Must(c.SingletonWithKeyOverride(key, initialize))
+func (impl *containerImpl) MustSingletonWithKeyOverride(key interface{}, initialize interface{}) {
+	impl.Must(impl.SingletonWithKeyOverride(key, initialize))
 }
 
 // New create a new container
 func New() Container {
-	cc := &containerImpl{
+	impl := &containerImpl{
 		objects:      make(map[interface{}]*Entity),
 		objectSlices: make([]*Entity, 0),
 	}
 
-	cc.MustSingleton(func() Container { return cc })
-	cc.MustSingleton(func() context.Context { return context.Background() })
-	cc.MustSingleton(func() Binder { return cc })
-	cc.MustSingleton(func() Resolver { return cc })
+	impl.MustSingleton(func() Container { return impl })
+	impl.MustSingleton(func() context.Context { return context.Background() })
+	impl.MustSingleton(func() Binder { return impl })
+	impl.MustSingleton(func() Resolver { return impl })
 
-	return cc
+	return impl
 }
 
 // NewWithContext create a new container with context support
@@ -141,7 +141,7 @@ func NewWithContext(ctx context.Context) Container {
 }
 
 // Extend create a new container, and it's parent is supplied container
-// If can not found a binding from current container, it will search from parents
+// If it can not find a binding from current container, it will search from parents
 func Extend(c Container) Container {
 	cc := &containerImpl{
 		objects:      make(map[interface{}]*Entity),
@@ -157,12 +157,12 @@ func Extend(c Container) Container {
 }
 
 // ExtendFrom extend from a parent containerImpl
-func (c *containerImpl) ExtendFrom(parent Container) {
-	c.parent = parent
+func (impl *containerImpl) ExtendFrom(parent Container) {
+	impl.parent = parent
 }
 
 // Must if err is not nil, panic it
-func (c *containerImpl) Must(err error) {
+func (impl *containerImpl) Must(err error) {
 	if err != nil {
 		panic(err)
 	}
@@ -170,53 +170,53 @@ func (c *containerImpl) Must(err error) {
 
 // Prototype bind a prototype
 // initialize func(...) (value, error)
-func (c *containerImpl) Prototype(initialize interface{}) error {
-	return c.Bind(initialize, true, false)
+func (impl *containerImpl) Prototype(initialize interface{}) error {
+	return impl.Bind(initialize, true, false)
 }
 
 // MustPrototype bind a prototype, if failed then panic
-func (c *containerImpl) MustPrototype(initialize interface{}) {
-	c.Must(c.Prototype(initialize))
+func (impl *containerImpl) MustPrototype(initialize interface{}) {
+	impl.Must(impl.Prototype(initialize))
 }
 
 // PrototypeWithKey bind a prototype with key
 // initialize func(...) (value, error)
-func (c *containerImpl) PrototypeWithKey(key interface{}, initialize interface{}) error {
-	return c.BindWithKey(key, initialize, true, false)
+func (impl *containerImpl) PrototypeWithKey(key interface{}, initialize interface{}) error {
+	return impl.BindWithKey(key, initialize, true, false)
 }
 
 // MustPrototypeWithKey bind a prototype with key, it failed, then panic
-func (c *containerImpl) MustPrototypeWithKey(key interface{}, initialize interface{}) {
-	c.Must(c.PrototypeWithKey(key, initialize))
+func (impl *containerImpl) MustPrototypeWithKey(key interface{}, initialize interface{}) {
+	impl.Must(impl.PrototypeWithKey(key, initialize))
 }
 
-// Singleton bind a singleton
-// initialize func(...) (value, error) or just an struct object
-func (c *containerImpl) Singleton(initialize interface{}) error {
-	return c.Bind(initialize, false, false)
+// Singleton bound a singleton
+// initialize func(...) (value, error) or just a struct object
+func (impl *containerImpl) Singleton(initialize interface{}) error {
+	return impl.Bind(initialize, false, false)
 }
 
 // MustSingleton bind a singleton, if bind failed, then panic
-func (c *containerImpl) MustSingleton(initialize interface{}) {
-	c.Must(c.Singleton(initialize))
+func (impl *containerImpl) MustSingleton(initialize interface{}) {
+	impl.Must(impl.Singleton(initialize))
 }
 
 // SingletonWithKey bind a singleton with key
 // initialize func(...) (value, error)
-func (c *containerImpl) SingletonWithKey(key interface{}, initialize interface{}) error {
-	return c.BindWithKey(key, initialize, false, false)
+func (impl *containerImpl) SingletonWithKey(key interface{}, initialize interface{}) error {
+	return impl.BindWithKey(key, initialize, false, false)
 }
 
 // MustSingletonWithKey bind a singleton with key, if failed, then panic
-func (c *containerImpl) MustSingletonWithKey(key interface{}, initialize interface{}) {
-	c.Must(c.SingletonWithKey(key, initialize))
+func (impl *containerImpl) MustSingletonWithKey(key interface{}, initialize interface{}) {
+	impl.Must(impl.SingletonWithKey(key, initialize))
 }
 
 // Provider create a provider from initializes
-func (c *containerImpl) Provider(initializes ...interface{}) EntitiesProvider {
+func (impl *containerImpl) Provider(initializes ...interface{}) EntitiesProvider {
 	entities := make([]*Entity, len(initializes))
 	for i, init := range initializes {
-		entity, err := c.newEntityWrapper(init, false)
+		entity, err := impl.newEntityWrapper(init, false)
 		if err != nil {
 			panic(err)
 		}
@@ -230,7 +230,7 @@ func (c *containerImpl) Provider(initializes ...interface{}) EntitiesProvider {
 }
 
 // newEntityWrapper create a new entity
-func (c *containerImpl) newEntityWrapper(initialize interface{}, prototype bool) (*Entity, error) {
+func (impl *containerImpl) newEntityWrapper(initialize interface{}, prototype bool) (*Entity, error) {
 	if !reflect.ValueOf(initialize).IsValid() {
 		return nil, buildInvalidArgsError("initialize is nil")
 	}
@@ -241,16 +241,16 @@ func (c *containerImpl) newEntityWrapper(initialize interface{}, prototype bool)
 	}
 
 	typ := initializeType.Out(0)
-	return c.newEntity(typ, typ, initialize, prototype, true), nil
+	return impl.newEntity(typ, typ, initialize, prototype, true), nil
 }
 
-func (c *containerImpl) newEntity(key interface{}, typ reflect.Type, initialize interface{}, prototype bool, override bool) *Entity {
+func (impl *containerImpl) newEntity(key interface{}, typ reflect.Type, initialize interface{}, prototype bool, override bool) *Entity {
 	entity := Entity{
 		initializeFunc: initialize,
 		key:            key,
 		typ:            typ,
 		value:          nil,
-		c:              c,
+		c:              impl,
 		prototype:      prototype,
 		override:       override,
 	}
@@ -258,11 +258,11 @@ func (c *containerImpl) newEntity(key interface{}, typ reflect.Type, initialize 
 	return &entity
 }
 
-func (c *containerImpl) MustAutoWire(object interface{}) {
-	c.Must(c.AutoWire(object))
+func (impl *containerImpl) MustAutoWire(object interface{}) {
+	impl.Must(impl.AutoWire(object))
 }
 
-func (c *containerImpl) AutoWire(object interface{}) error {
+func (impl *containerImpl) AutoWire(object interface{}) error {
 	if !reflect.ValueOf(object).IsValid() {
 		return buildInvalidArgsError("object is nil")
 	}
@@ -282,7 +282,7 @@ func (c *containerImpl) AutoWire(object interface{}) error {
 		}
 
 		if tag == "@" {
-			val, err := c.instanceOfType(field.Type, nil)
+			val, err := impl.instanceOfType(field.Type, nil)
 			if err != nil {
 				return fmt.Errorf("%v: %v", field.Name, err)
 			}
@@ -290,7 +290,7 @@ func (c *containerImpl) AutoWire(object interface{}) error {
 			fieldVal := structValue.Field(i)
 			reflect.NewAt(fieldVal.Type(), unsafe.Pointer(fieldVal.UnsafeAddr())).Elem().Set(val)
 		} else {
-			val, err := c.get(tag, nil)
+			val, err := impl.get(tag, nil)
 			if err != nil {
 				return fmt.Errorf("%v: %v", field.Name, err)
 			}
@@ -305,20 +305,20 @@ func (c *containerImpl) AutoWire(object interface{}) error {
 
 // Resolve inject args for func by callback
 // callback func(...)
-func (c *containerImpl) Resolve(callback interface{}) error {
-	_, err := c.Call(callback)
+func (impl *containerImpl) Resolve(callback interface{}) error {
+	_, err := impl.Call(callback)
 	return err
 }
 
 // MustResolve inject args for func by callback
-func (c *containerImpl) MustResolve(callback interface{}) {
-	c.Must(c.Resolve(callback))
+func (impl *containerImpl) MustResolve(callback interface{}) {
+	impl.Must(impl.Resolve(callback))
 }
 
 // ResolveWithError inject args for func by callback
 // callback func(...) error
-func (c *containerImpl) ResolveWithError(callback interface{}) error {
-	results, err := c.Call(callback)
+func (impl *containerImpl) ResolveWithError(callback interface{}) error {
+	results, err := impl.Call(callback)
 	if err != nil {
 		return err
 	}
@@ -333,7 +333,7 @@ func (c *containerImpl) ResolveWithError(callback interface{}) error {
 }
 
 // CallWithProvider execute the callback with extra service provider
-func (c *containerImpl) CallWithProvider(callback interface{}, provider EntitiesProvider) ([]interface{}, error) {
+func (impl *containerImpl) CallWithProvider(callback interface{}, provider EntitiesProvider) ([]interface{}, error) {
 	callbackValue, ok := callback.(reflect.Value)
 	if !ok {
 		callbackValue = reflect.ValueOf(callback)
@@ -343,7 +343,7 @@ func (c *containerImpl) CallWithProvider(callback interface{}, provider Entities
 		return nil, buildInvalidArgsError("callback is nil")
 	}
 
-	args, err := c.funcArgs(callbackValue.Type(), provider)
+	args, err := impl.funcArgs(callbackValue.Type(), provider)
 	if err != nil {
 		return nil, err
 	}
@@ -358,18 +358,18 @@ func (c *containerImpl) CallWithProvider(callback interface{}, provider Entities
 }
 
 // Call a callback function and return its results
-func (c *containerImpl) Call(callback interface{}) ([]interface{}, error) {
-	return c.CallWithProvider(callback, nil)
+func (impl *containerImpl) Call(callback interface{}) ([]interface{}, error) {
+	return impl.CallWithProvider(callback, nil)
 }
 
 // Get instance by key from container
-func (c *containerImpl) Get(key interface{}) (interface{}, error) {
-	return c.get(key, nil)
+func (impl *containerImpl) Get(key interface{}) (interface{}, error) {
+	return impl.get(key, nil)
 }
 
-func (c *containerImpl) getObj(lookupKey func(matchKey interface{}) bool, provider func() []*Entity) *Entity {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+func (impl *containerImpl) getObj(lookupKey func(matchKey interface{}) bool, provider func() []*Entity) *Entity {
+	impl.lock.RLock()
+	defer impl.lock.RUnlock()
 
 	if provider != nil {
 		for _, obj := range provider() {
@@ -379,7 +379,7 @@ func (c *containerImpl) getObj(lookupKey func(matchKey interface{}) bool, provid
 		}
 	}
 
-	for _, obj := range c.objectSlices {
+	for _, obj := range impl.objectSlices {
 		if lookupKey(obj.key) {
 			return obj
 		}
@@ -388,15 +388,15 @@ func (c *containerImpl) getObj(lookupKey func(matchKey interface{}) bool, provid
 	return nil
 }
 
-func (c *containerImpl) get(key interface{}, provider func() []*Entity) (interface{}, error) {
-	lookupKey, possibleKey := c.buildKeyLookupFunc(key)
-	obj := c.getObj(lookupKey, provider)
+func (impl *containerImpl) get(key interface{}, provider func() []*Entity) (interface{}, error) {
+	lookupKey, possibleKey := impl.buildKeyLookupFunc(key)
+	obj := impl.getObj(lookupKey, provider)
 	if obj != nil {
 		return obj.Value(provider)
 	}
 
-	if c.parent != nil {
-		return c.parent.Get(key)
+	if impl.parent != nil {
+		return impl.parent.Get(key)
 	}
 
 	errMsg := fmt.Sprintf("key=%v not found", key)
@@ -408,10 +408,10 @@ func (c *containerImpl) get(key interface{}, provider func() []*Entity) (interfa
 
 // buildKeyLookupFunc 构建用于查询 key 是否存在的函数
 // key 匹配规则为
-//    1. matchKey == lookupKey ，则匹配
-//    2. matchKey == type(lookupKey) ，则匹配
-//    3. 如果 lookupKey 是指向接口的指针，则解析成接口本身，与 matchKey 比较，相等则匹配
-func (c *containerImpl) buildKeyLookupFunc(lookupKey interface{}) (lookupFunc func(matchKey interface{}) bool, possibleKey interface{}) {
+//  1. matchKey == lookupKey ，则匹配
+//  2. matchKey == type(lookupKey) ，则匹配
+//  3. 如果 lookupKey 是指向接口的指针，则解析成接口本身，与 matchKey 比较，相等则匹配
+func (impl *containerImpl) buildKeyLookupFunc(lookupKey interface{}) (lookupFunc func(matchKey interface{}) bool, possibleKey interface{}) {
 	keyReflectType, lookupKeyIsReflectType := lookupKey.(reflect.Type)
 	if !lookupKeyIsReflectType {
 		keyReflectType = reflect.TypeOf(lookupKey)
@@ -446,8 +446,8 @@ func (c *containerImpl) buildKeyLookupFunc(lookupKey interface{}) (lookupFunc fu
 }
 
 // MustGet get instance by key from container
-func (c *containerImpl) MustGet(key interface{}) interface{} {
-	res, err := c.Get(key)
+func (impl *containerImpl) MustGet(key interface{}) interface{} {
+	res, err := impl.Get(key)
 	if err != nil {
 		panic(err)
 	}
@@ -455,12 +455,12 @@ func (c *containerImpl) MustGet(key interface{}) interface{} {
 	return res
 }
 
-func (c *containerImpl) funcArgs(t reflect.Type, provider func() []*Entity) ([]reflect.Value, error) {
+func (impl *containerImpl) funcArgs(t reflect.Type, provider func() []*Entity) ([]reflect.Value, error) {
 	argsSize := t.NumIn()
 	argValues := make([]reflect.Value, argsSize)
 	for i := 0; i < argsSize; i++ {
 		argType := t.In(i)
-		val, err := c.instanceOfType(argType, provider)
+		val, err := impl.instanceOfType(argType, provider)
 		if err != nil {
 			return argValues, err
 		}
@@ -471,8 +471,8 @@ func (c *containerImpl) funcArgs(t reflect.Type, provider func() []*Entity) ([]r
 	return argValues, nil
 }
 
-func (c *containerImpl) instanceOfType(t reflect.Type, provider func() []*Entity) (reflect.Value, error) {
-	arg, err := c.get(t, provider)
+func (impl *containerImpl) instanceOfType(t reflect.Type, provider func() []*Entity) (reflect.Value, error) {
+	arg, err := impl.get(t, provider)
 	if err != nil {
 		return reflect.Value{}, buildArgNotInstancedError(err.Error())
 	}
@@ -481,12 +481,12 @@ func (c *containerImpl) instanceOfType(t reflect.Type, provider func() []*Entity
 }
 
 // Keys return all keys
-func (c *containerImpl) Keys() []interface{} {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+func (impl *containerImpl) Keys() []interface{} {
+	impl.lock.RLock()
+	defer impl.lock.RUnlock()
 
 	results := make([]interface{}, 0)
-	for k := range c.objects {
+	for _, k := range impl.objectSlices {
 		results = append(results, k)
 	}
 
@@ -494,11 +494,11 @@ func (c *containerImpl) Keys() []interface{} {
 }
 
 // CanOverride returns whether the key can be override
-func (c *containerImpl) CanOverride(key interface{}) (bool, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+func (impl *containerImpl) CanOverride(key interface{}) (bool, error) {
+	impl.lock.RLock()
+	defer impl.lock.RUnlock()
 
-	obj, ok := c.objects[key]
+	obj, ok := impl.objects[key]
 	if !ok {
 		return true, buildObjectNotFoundError(fmt.Sprintf("key=%#v not found", key))
 	}
@@ -507,7 +507,7 @@ func (c *containerImpl) CanOverride(key interface{}) (bool, error) {
 }
 
 // isValidKeyKind 判断类型是否允许作为key
-func (c *containerImpl) isValidKeyKind(kind reflect.Kind) error {
+func (impl *containerImpl) isValidKeyKind(kind reflect.Kind) error {
 	if kind == reflect.Struct || kind == reflect.Interface || kind == reflect.Ptr {
 		return nil
 	}
