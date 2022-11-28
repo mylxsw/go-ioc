@@ -2,9 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"github.com/mylxsw/go-ioc"
 	"log"
 
-	"github.com/mylxsw/container"
 	"github.com/mylxsw/container/example/repo"
 	_ "github.com/proullon/ramsql/driver"
 )
@@ -16,12 +16,12 @@ type Demo struct {
 
 func main() {
 
-	cc := container.New()
+	cc := ioc.New()
 
 	// 绑定对象创建函数
-	cc.MustSingleton(repo.NewUserRepo)
+	cc.MS(repo.NewUserRepo)
 	cc.MustSingleton(repo.NewRoleRepo)
-	cc.MustSingleton(func() (*sql.DB, error) {
+	cc.MS(func() (*sql.DB, error) {
 		db, err := sql.Open("ramsql", "database address")
 		if err != nil {
 			return nil, err
@@ -38,7 +38,7 @@ func main() {
 	})
 
 	// 使用 ResolveWithError
-	err := cc.ResolveWithError(func(userRepo repo.UserRepo, roleRepo repo.RoleRepo) error {
+	err := cc.R(func(userRepo repo.UserRepo, roleRepo repo.RoleRepo) error {
 		user, err := userRepo.GetUser(1)
 		if err != nil {
 			return err
@@ -56,7 +56,8 @@ func main() {
 	// 使用 AutoWire 初始化结构体
 	{
 		demo := Demo{}
-		cc.Must(cc.AutoWire(&demo))
+		//cc.Must(cc.AutoWire(&demo))
+		cc.MW(&demo)
 
 		user, err := demo.UserRepo.GetUser(1)
 		if err != nil {

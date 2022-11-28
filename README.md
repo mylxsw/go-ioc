@@ -1,4 +1,4 @@
-# Container 
+# Go-IOC 
 
 [![Build Status](https://www.travis-ci.org/mylxsw/container.svg?branch=master)](https://www.travis-ci.org/mylxsw/container)
 [![Coverage Status](https://coveralls.io/repos/github/mylxsw/container/badge.svg?branch=master)](https://coveralls.io/github/mylxsw/container?branch=master)
@@ -8,21 +8,21 @@
 [![GitHub](https://img.shields.io/github/license/mylxsw/container.svg)](https://github.com/mylxsw/container)
 
 
-**Container** 是一款为 Go 语言开发的运行时依赖注入库。Go 语言的语言特性决定了实现一款类型安全的依赖注入容器并不太容易，因此 **Container** 大量使用了 Go 的反射机制。如果你的使用场景对性能要求并不是那个苛刻，那 **Container** 非常适合你。
+**Go-IOC** 是一款为 Go 语言开发的运行时依赖注入库。Go 语言的语言特性决定了实现一款类型安全的依赖注入容器并不太容易，因此 **Go-IOC** 大量使用了 Go 的反射机制。如果你的使用场景对性能要求并不是那个苛刻，那 **Go-IOC** 非常适合你。
 
-> 并不是说对性能要求苛刻的环境中就不能使用了，你可以把 **Container** 作为一个对象依赖管理工具，在你的业务初始化时获取依赖的对象。
+> 并不是说对性能要求苛刻的环境中就不能使用了，你可以把 **Go-IOC** 作为一个对象依赖管理工具，在你的业务初始化时获取依赖的对象。
 
 使用方式
 
-    go get github.com/mylxsw/container
+    go get github.com/mylxsw/go-ioc
 
-要创建一个 **Container** 实例，使用 `containier.New` 方法
+要创建一个 **Container** 实例，使用 `ioc.New` 方法
 
-    cc := container.New()
+    cc := ioc.New()
 
 此时就创建了一个空的容器。
 
-> 你也可以使用 `container.NewWithContext(ctx)` 来创建容器，创建之后，可以自动的把已经存在的 `context.Context` 对象添加到容器中，由容器托管。
+> 你也可以使用 `ioc.NewWithContext(ctx)` 来创建容器，创建之后，可以自动的把已经存在的 `context.Context` 对象添加到容器中，由容器托管。
 
 ## 对象绑定
 
@@ -120,7 +120,7 @@
 
 ### Resolve
 
-`Resolve(callback interface{}) error` 方法执行体 callback 内部只能进行依赖注入，不接收注入函数的返回值，虽然有一个 `error` 返回值，但是该值只表明是否在注入对象时产生错误。
+`Resolve(callback interface{}) error` 方法执行体 callback 内部能够进行依赖注入，`error` 返回值，表明在注入对象时产生错误或者 callback 返回了 error。
 
 比如，我们需要获取某个用户的信息和其角色信息，使用 Resolve 方法
 
@@ -136,11 +136,7 @@
         // do something you want with user/role
     })
 
-直接使用 `Resolve` 方法可能并不太满足我们的日常业务需求，因为在执行查询的时候，总是会遇到各种 `error`，直接丢弃会产生很多隐藏的 Bug，但是我们也不倾向于使用 `Panic` 这种暴力的方式来解决。
-
-**Container** 提供了 `ResolveWithError(callback interface{}) error` 方法，使用该方法时，我们的 callback 可以接受一个 `error` 返回值，来告诉调用者这里出现问题了。
-
-    err := cc.ResolveWithError(func(userRepo repo.UserRepo, roleRepo repo.RoleRepoo) error {
+    err := cc.Resolve(func(userRepo repo.UserRepo, roleRepo repo.RoleRepoo) error {
         user, err := userRepo.GetUser(123)
         if err != nil {
             return err
@@ -271,7 +267,7 @@ WithCondition(init interface{}, onCondition interface{}) Conditional
 
 ## 示例项目
 
-简单的示例可以参考项目的 [example](https://github.com/mylxsw/container/tree/master/example) 目录。
+简单的示例可以参考项目的 [example](https://github.com/mylxsw/go-ioc/tree/master/example) 目录。
 
 以下项目中使用了 `Container` 作为依赖注入管理库，感兴趣的可以参考一下。
 

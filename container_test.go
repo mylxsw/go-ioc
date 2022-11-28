@@ -1,4 +1,4 @@
-package container_test
+package ioc_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mylxsw/container"
+	"github.com/mylxsw/go-ioc"
 )
 
 type GetUserInterface interface {
@@ -29,21 +29,21 @@ type UserService struct {
 }
 
 func (u *UserService) GetUser() string {
-	return fmt.Sprintf("get user from connection: %s", u.repo.connStr)
+	return fmt.Sprintf("lookupInstance user from connection: %s", u.repo.connStr)
 }
 
 type UserRepo struct {
 	connStr string
 }
 
-var expectedValue = "get user from connection: root:root@/my_db?charset=utf8"
+var expectedValue = "lookupInstance user from connection: root:root@/my_db?charset=utf8"
 
 // TestPrototype 测试原型模式
 func TestPrototype(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
-	c.MustSingleton(func(c container.Container) (*UserRepo, error) {
+	c.MustSingleton(func(c ioc.Container) (*UserRepo, error) {
 		connStr, err := c.Get("conn_str")
 		if err != nil {
 			return nil, err
@@ -98,7 +98,7 @@ func TestPrototype(t *testing.T) {
 	}
 
 	{
-		c.MustResolve(func(cc container.Container) {
+		c.MustResolve(func(cc ioc.Container) {
 			userService, err := c.Get((*UserService)(nil))
 			if err != nil {
 				t.Error(err)
@@ -114,9 +114,9 @@ func TestPrototype(t *testing.T) {
 
 // TestInterfaceInjection 测试接口注入
 func TestInterfaceInjection(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
-	c.MustSingleton(func(c container.Container) (*UserRepo, error) {
+	c.MustSingleton(func(c ioc.Container) (*UserRepo, error) {
 		connStr, err := c.Get("conn_str")
 		if err != nil {
 			return nil, err
@@ -159,7 +159,7 @@ func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	c := container.NewWithContext(ctx)
+	c := ioc.NewWithContext(ctx)
 	c.MustResolve(func(ctx context.Context) {
 		startTime := time.Now().UnixNano()
 		<-ctx.Done()
@@ -178,9 +178,9 @@ type TestObject struct {
 
 // TestWithProvider 测试使用 Provider 提供额外的实例配置
 func TestWithProvider(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
-	c.MustSingleton(func(c container.Container) (*UserRepo, error) {
+	c.MustSingleton(func(c ioc.Container) (*UserRepo, error) {
 		connStr, err := c.Get("conn_str")
 		if err != nil {
 			return nil, err
@@ -210,7 +210,7 @@ func TestWithProvider(t *testing.T) {
 
 // TestBindValue 测试直接绑定实体对象
 func TestBindValue(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 	userRepoStruct := UserRepo{connStr: "user struct"}
 	userRepoPointer := &UserRepo{connStr: "user pointer"}
 
@@ -231,7 +231,7 @@ func TestBindValue(t *testing.T) {
 }
 
 func TestSearchAdvanced(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 	c.MustSingleton(func() *UserRepo {
 		return &UserRepo{connStr: "this is user repo"}
 	})
@@ -258,9 +258,9 @@ func TestSearchAdvanced(t *testing.T) {
 
 // TestExtend 测试容器扩展
 func TestExtend(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 	c.MustBindValue("conn_str", "root:root@/my_db?charset=utf8")
-	c.MustSingleton(func(c container.Container) (*UserRepo, error) {
+	c.MustSingleton(func(c ioc.Container) (*UserRepo, error) {
 		connStr, err := c.Get("conn_str")
 		if err != nil {
 			return nil, err
@@ -280,7 +280,7 @@ func TestExtend(t *testing.T) {
 		t.Error("test failed")
 	}
 
-	c2 := container.Extend(c)
+	c2 := ioc.Extend(c)
 	c2.MustBindValue("name", "c2")
 	if err := c2.Resolve(func(userRepo *UserRepo) {
 		if userRepo.connStr == "" {
@@ -319,7 +319,7 @@ type demo2 struct{}
 func (d demo2) String() string { return "demo2" }
 
 func TestContainerImpl_Override(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 
 	c.MustSingletonOverride(func() InterfaceDemo {
 		return demo1{}
@@ -351,7 +351,7 @@ type UserManager struct {
 }
 
 func TestContainerImpl_AutoWire(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 
 	userRepoStruct := UserRepo{connStr: "user struct"}
 	userRepoPointer := &UserRepo{connStr: "user pointer"}
@@ -381,7 +381,7 @@ func TestContainerImpl_AutoWire(t *testing.T) {
 // ------------- 测试 Keys -------------
 
 func TestContainerImpl_Keys(t *testing.T) {
-	c := container.New()
+	c := ioc.New()
 	c.MustSingleton(func() InterfaceDemo { return demo1{} })
 	c.MustSingleton(demo2{})
 	c.MustBindValue("key1", "value1")
@@ -399,12 +399,12 @@ func TestContainerImpl_Keys(t *testing.T) {
 
 func TestConditional(t *testing.T) {
 	{
-		c := container.New()
-		c.MustSingleton(container.WithCondition(func() InterfaceDemo {
+		c := ioc.New()
+		c.MustSingleton(ioc.WithCondition(func() InterfaceDemo {
 			return demo1{}
 		}, func() bool { return true }))
 
-		c.MustSingleton(container.WithCondition(func() InterfaceDemo {
+		c.MustSingleton(ioc.WithCondition(func() InterfaceDemo {
 			return demo2{}
 		}, func() bool { return false }))
 
@@ -416,12 +416,12 @@ func TestConditional(t *testing.T) {
 	}
 
 	{
-		c := container.New()
-		c.MustPrototype(container.WithCondition(func() InterfaceDemo {
+		c := ioc.New()
+		c.MustPrototype(ioc.WithCondition(func() InterfaceDemo {
 			return demo2{}
 		}, func() bool { return true }))
 
-		c.MustPrototype(container.WithCondition(func() InterfaceDemo {
+		c.MustPrototype(ioc.WithCondition(func() InterfaceDemo {
 			return demo1{}
 		}, func() bool { return false }))
 
@@ -435,7 +435,7 @@ func TestConditional(t *testing.T) {
 }
 
 func TestResolveReflectValue(t *testing.T) {
-	cc := container.New()
+	cc := ioc.New()
 	cc.MustSingleton(func() InterfaceDemo { return demo1{} })
 
 	callback := func(demo InterfaceDemo) {

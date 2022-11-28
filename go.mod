@@ -1,3 +1,3 @@
-module github.com/mylxsw/container
+module github.com/mylxsw/go-ioc
 
-go 1.13
+go 1.19

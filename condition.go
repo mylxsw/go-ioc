@@ -1,4 +1,4 @@
-package container
+package ioc
 
 import (
 	"errors"
@@ -19,8 +19,8 @@ type conditional struct {
 // WithCondition 创建 Conditional 接口实例
 // init 参数为传递个 Singleton/Prototype 方法的实例创建方法
 // onCondition 参数支持两种形式
-// 	- `onCondition(依赖注入参数列表...) bool`
-//	- `onCondition(依赖注入参数列表...) (bool, error)`
+//   - `onCondition(依赖注入参数列表...) bool`
+//   - `onCondition(依赖注入参数列表...) (bool, error)`
 func WithCondition(init interface{}, onCondition interface{}) Conditional {
 	if onCondition == nil {
 		panic("invalid argument onCondition: can not be nil [onCondition() bool or onCondition() (bool, error)]")

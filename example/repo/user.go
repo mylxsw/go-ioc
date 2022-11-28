@@ -2,8 +2,7 @@ package repo
 
 import (
 	"database/sql"
-
-	"github.com/mylxsw/container"
+	"github.com/mylxsw/go-ioc"
 )
 
 type User struct {
@@ -17,7 +16,7 @@ type UserRepo interface {
 }
 
 type userRepo struct {
-	cc container.Container
+	cc ioc.Container
 	db *sql.DB
 }
 
@@ -31,6 +30,6 @@ func (repo userRepo) GetUser(id int) (*User, error) {
 	return &user, nil
 }
 
-func NewUserRepo(cc container.Container, db *sql.DB) UserRepo {
+func NewUserRepo(cc ioc.Container, db *sql.DB) UserRepo {
 	return &userRepo{cc: cc, db: db}
 }
